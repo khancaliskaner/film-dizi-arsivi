@@ -15,6 +15,7 @@ const Stats = (() => {
   const RATING_LABELS = ['½', '1', '1½', '2', '2½', '3', '3½', '4', '4½', '5'];
 
   let year = null;
+  let shown = { year: new Date().getFullYear(), items: [] }; // ekranda gösterilen yıl ve kayıtları
 
   const format = number => number.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -59,6 +60,7 @@ const Stats = (() => {
     yearSelect.value = year;
 
     const items = dated.filter(item => item.watchedDate.startsWith(year));
+    shown = { year: Number(year), items };
 
     // Özet kutuları
     const films = items.filter(item => item.type === 'film').length;
@@ -104,8 +106,7 @@ const Stats = (() => {
 
     shareTextEl.value = shareText(items, films, series, average);
     const empty = items.length === 0;
-    shareCopyBtn.disabled = empty;
-    shareNativeBtn.disabled = empty;
+    document.querySelectorAll('.share-action').forEach(button => { button.disabled = empty; });
     setShareStatus('');
 
     // Tarihi olmayan izlenenler hiçbir yıla sayılamaz; kullanıcıya haber ver
@@ -192,6 +193,10 @@ const Stats = (() => {
     },
     hide() {
       section.hidden = true;
+    },
+    // Şu an seçili yıl ve o yılın izlenen kayıtları (paylaşım için)
+    current() {
+      return shown;
     }
   };
 })();

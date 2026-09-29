@@ -149,12 +149,15 @@
       <!-- Seçili yılın izlediklerini metin olarak paylaş -->
       <div class="chart-card">
         <h3>Bu yıl izlediklerimi paylaş</h3>
-        <p class="chart-readout">Seçili yılın listesi, WhatsApp veya Instagram'a yapıştırabileceğin bir metin olarak hazır.</p>
+        <p class="chart-readout">Seçili yılın listesini metin, link veya resim olarak paylaşabilirsin.</p>
         <textarea id="share-text" class="share-text" readonly rows="8" aria-label="Paylaşılacak metin"></textarea>
         <div class="backup-actions">
-          <button type="button" class="btn btn-primary" id="share-copy">Metni kopyala</button>
-          <button type="button" class="btn" id="share-native" hidden>Paylaş…</button>
+          <button type="button" class="btn btn-primary share-action" id="share-copy">Metni kopyala</button>
+          <button type="button" class="btn share-action" id="share-link-btn">Linki kopyala</button>
+          <button type="button" class="btn share-action" id="share-image-btn">Resim indir</button>
+          <button type="button" class="btn share-action" id="share-native" hidden>Paylaş…</button>
         </div>
+        <input type="text" id="share-link" class="share-link" readonly hidden aria-label="Paylaşım linki">
         <p class="hint" id="share-status" hidden></p>
       </div>
     </section>
@@ -182,6 +185,13 @@
         <div class="grid" id="list-grid"></div>
         <p class="empty" id="list-empty" hidden>Bu liste boş. Arşivdeki kartların üzerindeki "+" düğmesiyle buraya ekleyebilirsin.</p>
       </div>
+    </section>
+
+    <!-- Paylaşım linkiyle açılan salt-okunur sayfa: js/share.js -->
+    <section id="shared" hidden>
+      <div class="grid" id="shared-grid"></div>
+      <p class="empty" id="shared-note" hidden></p>
+      <p class="shared-foot muted">Bu sayfa, bir paylaşım linkinden oluşturuldu. <a href="#kesfet">Uygulamayı aç</a></p>
     </section>
 
     <!-- Profil sayfası: içeriği js/profile.js çizer -->
@@ -387,6 +397,7 @@
   <script src="js/stats.js"></script>
   <script src="js/lists.js"></script>
   <script src="js/profile.js"></script>
+  <script src="js/share.js"></script>
   <script src="js/app.js"></script>
   <script src="js/backup.js"></script>
 </body>

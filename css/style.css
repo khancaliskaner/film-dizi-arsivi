@@ -854,6 +854,28 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 .chart-card .hint { margin-top: 10px; }
 
+.share-link {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+/* ---------- Paylaşım linkiyle açılan sayfa ---------- */
+.shared-mode .nav,
+.shared-mode #add-btn,
+.shared-mode #settings-btn { display: none; }
+.shared-mode .logo { pointer-events: none; }
+.shared-foot { margin-top: 32px; text-align: center; font-size: 0.85rem; }
+.shared-foot a { color: var(--accent); font-weight: 600; }
+.liked-badge { background: #ff5d73; }
+
 /* ---------- Keşfet filtreleri (arşiv araç çubuğunun stilini kullanır) ---------- */
 .disc-filters { margin-bottom: 16px; }
 

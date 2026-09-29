@@ -45,11 +45,16 @@ const PAGES = {
     title: 'Profil',
     subtitle: 'Favorilerin ve özetin',
     view: Profile // içeriği js/profile.js çizer
+  },
+  paylas: {
+    title: 'Paylaşılan liste',
+    subtitle: '',
+    view: Share // linkle açılan salt-okunur sayfa; başlığı js/share.js kendisi yazar
   }
 };
 
-// Sayfa kendi içeriğini çizen bölümler (Keşfet, Günlük, İstatistik, Listelerim, Profil)
-const VIEWS = [Discover, Diary, Stats, Lists, Profile];
+// Sayfa kendi içeriğini çizen bölümler (Keşfet, Günlük, İstatistik, Listelerim, Profil, Paylaşım)
+const VIEWS = [Discover, Diary, Stats, Lists, Profile, Share];
 
 // İzleme tarihine göre yeniden eskiye; tarih yoksa eklenme zamanına bakar.
 function byWatchedDateDesc(a, b) {
@@ -194,6 +199,8 @@ function render() {
   document.querySelectorAll('.nav a').forEach(link => {
     link.classList.toggle('active', link.dataset.page === pageName);
   });
+  // Paylaşım linkiyle açılan sayfada menü ve düğmeler gizlenir (ziyaretçi sadece listeyi görür)
+  document.body.classList.toggle('shared-mode', pageName === 'paylas');
 
   // Kendi içeriğini çizen sayfalarda arşiv listesi ve araç çubuğu gizlenir
   for (const view of VIEWS) {
