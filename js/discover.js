@@ -380,6 +380,7 @@ const Discover = (() => {
 
   gridEl.addEventListener('error', event => {
     if (!event.target.classList.contains('poster-img')) return;
+    if (retryPoster(event.target)) return; // önce farklı adresle bir kez daha dene
     event.target.remove();
     posterFail++;
     if (posterFail >= 4 && posterOk === 0) posterNote.hidden = false;

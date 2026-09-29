@@ -106,11 +106,27 @@ async function cacheFirstImage(request) {
       await cache.put(request.url, response.clone());
       trimImages(cache);
     }
+    imageStats.cors++;
     return response;
   } catch {
-    return Response.error();
+    // CORS'lu istek başarısız oldu (afiş sunucusunun bazı kopyaları gerekli başlığı vermeyebiliyor).
+    // Sayfanın kendi (düz) isteğiyle bir kez daha dene; bu cevap saklanmaz ama afiş yine de görünür.
+    try {
+      const plain = await fetch(request.clone());
+      imageStats.duzIstek++;
+      return plain;
+    } catch {
+      imageStats.basarisiz++;
+      return Response.error();
+    }
   }
 }
+
+// Sayfadaki "Bağlantıyı test et" bu sayaçları okur: hangi yolla kaç afiş geldi
+const imageStats = { cors: 0, duzIstek: 0, basarisiz: 0 };
+self.addEventListener('message', event => {
+  if (event.data === 'afis-istatistik' && event.ports[0]) event.ports[0].postMessage(imageStats);
+});
 
 async function trimImages(cache) {
   const keys = await cache.keys();

@@ -279,8 +279,19 @@ function cardHtml(item, options = {}) {
 }
 
 // İnternet yoksa afiş yüklenemez: resmi kaldır, altındaki renkli yer tutucu görünsün
+// Afiş yüklenemezse önce bir kez adresin sonuna "?r=1" ekleyerek yeniden dener (afiş sunucusunun bazı kenar
+// kopyaları belirli dosyalarda bozuk cevap verebiliyor; farklı adres genelde yeni kopya getirir). Yine olmazsa
+// resim kaldırılır ve altındaki renkli yer tutucu görünür. Deneme yapıldıysa true döner.
+function retryPoster(image) {
+  if (image.dataset.retried) return false;
+  image.dataset.retried = '1';
+  image.src = image.src + (image.src.includes('?') ? '&' : '?') + 'r=1';
+  return true;
+}
+
 function removeBrokenPoster(event) {
-  if (event.target.classList.contains('poster-img')) event.target.remove();
+  if (!event.target.classList.contains('poster-img')) return;
+  if (!retryPoster(event.target)) event.target.remove();
 }
 grid.addEventListener('error', removeBrokenPoster, true);
 
@@ -756,6 +767,16 @@ document.getElementById('conn-test-btn').addEventListener('click', async event =
       setTimeout(() => resolve('zaman aşımı'), 8000);
     });
     lines.push(`ℹ …${url.slice(url.lastIndexOf('/', url.lastIndexOf('/') - 1))}: ${stored}; ${loaded}`);
+  }
+  // Servis çalışanı afişleri hangi yolla getirdi? (cors = normal, düz = yedek yol, başarısız = hiçbiri)
+  if (navigator.serviceWorker?.controller) {
+    const stats = await new Promise(resolve => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = event => resolve(event.data);
+      navigator.serviceWorker.controller.postMessage('afis-istatistik', [channel.port2]);
+      setTimeout(() => resolve(null), 2000);
+    });
+    if (stats) lines.push(`ℹ Servis çalışanı afiş sayaçları: normal ${stats.cors}, yedek yol ${stats.duzIstek}, başarısız ${stats.basarisiz}`);
   }
 
   if (Omdb.isReady()) {
