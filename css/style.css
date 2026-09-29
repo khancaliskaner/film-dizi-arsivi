@@ -361,7 +361,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 /* ---------- Telefon ---------- */
 @media (max-width: 640px) {
   .header-inner { flex-wrap: wrap; gap: 8px; }
-  .logo { flex: 1; }
+  .logo { flex: 1; font-size: 1.05rem; }
   .nav {
     order: 3;
     flex-basis: 100%;
