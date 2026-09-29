@@ -117,20 +117,23 @@ const Share = (() => {
     const W = 1080;
     const H = 1350;
     const FONT = 'system-ui, "Segoe UI", Roboto, sans-serif';
+    // Kartın renkleri, seçili palete göre sayfadan okunur
+    const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const colors = { bg: css('--bg'), accent: css('--accent-text'), text: css('--text'), muted: css('--muted') };
     const canvas = document.createElement('canvas');
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = '#14181c';
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, W, H);
 
     // Başlık alanı
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#00c030';
+    ctx.fillStyle = colors.accent;
     ctx.font = `700 26px ${FONT}`;
     ctx.fillText("K A A N ' I N   N İ Ş   S E Ç İ M L E R İ", W / 2, 84);
-    ctx.fillStyle = '#e3e8ed';
+    ctx.fillStyle = colors.text;
     ctx.font = `800 120px ${FONT}`;
     ctx.fillText(String(year), W / 2, 200);
     ctx.font = `600 34px ${FONT}`;
@@ -163,7 +166,7 @@ const Share = (() => {
         gradient.addColorStop(1, `hsl(${(hue + 40) % 360}, 40%, 12%)`);
         ctx.fillStyle = gradient;
         ctx.fillRect(x, y, pw, ph);
-        ctx.fillStyle = '#e3e8ed';
+        ctx.fillStyle = colors.text;
         ctx.font = `700 22px ${FONT}`;
         const lines = wrapText(ctx, item.title, pw - 24);
         lines.forEach((line, i) => ctx.fillText(line, x + pw / 2, y + ph / 2 - ((lines.length - 1) * 14) + i * 28));
@@ -174,7 +177,7 @@ const Share = (() => {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         roundRect(ctx, x + 8, y + ph - 40, 84, 32, 8);
         ctx.fill();
-        ctx.fillStyle = '#00c030';
+        ctx.fillStyle = colors.accent;
         ctx.font = `700 20px ${FONT}`;
         ctx.textAlign = 'left';
         ctx.fillText(`★ ${item.rating}`, x + 18, y + ph - 17);
@@ -189,11 +192,11 @@ const Share = (() => {
     });
 
     // Alt bilgi
-    ctx.fillStyle = '#e3e8ed';
+    ctx.fillStyle = colors.text;
     ctx.font = `600 30px ${FONT}`;
     ctx.fillText(summary, W / 2, 1245);
     const more = items.length - shown.length;
-    ctx.fillStyle = '#8a99a8';
+    ctx.fillStyle = colors.muted;
     ctx.font = `500 24px ${FONT}`;
     ctx.fillText(more > 0 ? `en yüksek puanlı ${shown.length} yapım gösteriliyor, +${more} yapım daha` : `${shown.length} yapım`, W / 2, 1290);
 

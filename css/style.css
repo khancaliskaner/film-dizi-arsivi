@@ -9,7 +9,9 @@
   --muted: #8a99a8;
   --accent: #00c030;
   --accent-hover: #00a828;
-  --star: #00c030;
+  --accent-text: #00c030; /* yeşilin koyu zeminde yazı/yıldız olarak kullanılan tonu */
+  --on-accent: #fff; /* vurgu renkli düğmelerin üstündeki yazı rengi */
+  --star: var(--accent-text);
   --danger: #e5484d;
   --radius: 8px;
   color-scheme: dark;
@@ -35,7 +37,7 @@ a { color: inherit; text-decoration: none; }
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(20, 24, 28, 0.92);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -94,7 +96,7 @@ a { color: inherit; text-decoration: none; }
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
@@ -349,7 +351,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 .dialog-form .toggle label:has(input:checked) {
   border-color: var(--accent);
-  background: rgba(0, 192, 48, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .dialog-form .toggle label:has(input:focus-visible) { outline: 2px solid var(--accent); }
@@ -428,7 +430,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 
 #settings-status { white-space: pre-line; } /* satırlar alt alta */
-.hint.ok { color: var(--accent); }
+.hint.ok { color: var(--accent-text); }
 .hint.error { color: var(--danger); }
 
 /* ---------- TMDB arama sonuçları ---------- */
@@ -512,7 +514,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 
 .preview-info p { margin: 0; }
-.preview-genres { color: var(--accent); font-size: 0.8rem; font-weight: 600; }
+.preview-genres { color: var(--accent-text); font-size: 0.8rem; font-weight: 600; }
 
 .preview-overview {
   font-size: 0.85rem;
@@ -585,7 +587,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   justify-content: center;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.85rem;
   font-weight: 800;
 }
@@ -818,7 +820,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 
 .bar-col:hover .bar,
-.bar-col:focus-visible .bar { background: #33d95c; }
+.bar-col:focus-visible .bar { background: color-mix(in srgb, var(--accent) 75%, white); }
 
 .bar-value {
   position: absolute;
@@ -873,8 +875,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .shared-mode #settings-btn { display: none; }
 .shared-mode .logo { pointer-events: none; }
 .shared-foot { margin-top: 32px; text-align: center; font-size: 0.85rem; }
-.shared-foot a { color: var(--accent); font-weight: 600; }
-.liked-badge { background: #ff5d73; }
+.shared-foot a { color: var(--accent-text); font-weight: 600; }
+.liked-badge { background: #ff5d73; color: #fff; }
 
 /* ---------- Keşfet filtreleri (arşiv araç çubuğunun stilini kullanır) ---------- */
 .disc-filters { margin-bottom: 16px; }
@@ -893,7 +895,43 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 
 .check-filter input { width: 20px; height: 20px; accent-color: var(--accent); }
-.check-filter:has(input:checked) { border-color: var(--accent); background: rgba(0, 192, 48, 0.1); }
+.check-filter:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+/* ---------- Görünüm / renk paleti (Ayarlar penceresinde) ---------- */
+.appearance { border-top: 1px solid var(--border); }
+.swatch-group { display: flex; flex-direction: column; gap: 8px; }
+.swatch-label { font-size: 0.9rem; font-weight: 600; }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Vurgu rengi: yuvarlak renk düğmeleri, seçili olanın çevresinde halka */
+.swatch {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--text); }
+
+/* Zemin tonu: kendi renginde önizlemeli küçük düğmeler */
+.bg-swatch {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--swatch-border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--swatch-bg) 55%, var(--swatch-surface) 55%);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.bg-swatch[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
 /* ---------- Yedekleme (Ayarlar penceresinde) ---------- */
 .backup { border-top: 1px solid var(--border); }
@@ -913,7 +951,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 }
 
 .mode-row input { margin-top: 4px; accent-color: var(--accent); }
-.mode-row:has(input:checked) { border-color: var(--accent); background: rgba(0, 192, 48, 0.08); }
+.mode-row:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
 /* ---------- Oyuncular ---------- */
 .detail-director { font-size: 0.9rem; font-weight: 600; }
@@ -997,7 +1035,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .watch-link {
   display: inline-block;
   margin-top: 4px;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -1207,7 +1245,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .pick-empty { padding: 12px; }
 
 /* ---------- Cila: küçük dokunuşlar (hareket, odak, boş durumlar) ---------- */
-::selection { background: rgba(0, 192, 48, 0.3); }
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 html { scrollbar-color: var(--surface-2) var(--bg); }
 
 /* Klavyeyle gezenler için her yerde aynı odak halkası */
