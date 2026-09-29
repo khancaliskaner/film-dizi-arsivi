@@ -5,6 +5,7 @@ const STORAGE_KEY = 'arsiv_kayitlar';
 const SETTINGS_KEY = 'arsiv_ayarlar';
 const LISTS_KEY = 'arsiv_listeler';
 const FAVORITES_KEY = 'arsiv_favoriler';
+const GOALS_KEY = 'arsiv_hedefler';
 
 const BACKUP_APP = 'kaan-nis-secimleri';
 
@@ -34,6 +35,19 @@ function cleanItem(raw) {
     createdAt: text(raw.createdAt, 40) || new Date().toISOString(),
     ...(typeof raw.updatedAt === 'string' ? { updatedAt: raw.updatedAt.slice(0, 40) } : {})
   };
+}
+
+// Yıllık hedefleri kontrol eder: yıl 1900-2200, sayı 1-9999, tür hepsi/film/dizi; geçersizler atılır.
+function cleanGoals(raw) {
+  const goals = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return goals;
+  for (const [year, goal] of Object.entries(raw)) {
+    const count = Number(goal?.count);
+    if (/^\d{4}$/.test(year) && year >= 1900 && year <= 2200 && Number.isInteger(count) && count >= 1 && count <= 9999) {
+      goals[year] = { count, type: ['film', 'dizi'].includes(goal.type) ? goal.type : 'hepsi' };
+    }
+  }
+  return goals;
 }
 
 // Aynısı özel listeler için.
@@ -164,6 +178,27 @@ const Storage = {
     this.saveFavorites(ids);
   },
 
+  // ---------- Yıllık hedefler ({ "2026": { count: 100, type: "hepsi" | "film" | "dizi" } }) ----------
+  getGoals() {
+    try {
+      return cleanGoals(JSON.parse(localStorage.getItem(GOALS_KEY)));
+    } catch {
+      return {};
+    }
+  },
+
+  getGoal(year) {
+    return this.getGoals()[String(year)] || null;
+  },
+
+  // goal null verilirse o yılın hedefi silinir
+  setGoal(year, goal) {
+    const goals = this.getGoals();
+    if (goal) goals[String(year)] = goal;
+    else delete goals[String(year)];
+    localStorage.setItem(GOALS_KEY, JSON.stringify(cleanGoals(goals)));
+  },
+
   // ---------- Yedekleme (JSON dışa / içe aktarma) ----------
   // Kayıtlar, listeler ve favoriler yedeğe girer. Ayarlar (TMDB anahtarı) girmez.
   exportAll() {
@@ -173,7 +208,8 @@ const Storage = {
       exportedAt: new Date().toISOString(),
       items: this.getAll(),
       lists: this.getLists(),
-      favorites: this.getFavorites()
+      favorites: this.getFavorites(),
+      goals: this.getGoals()
     };
   },
 
@@ -190,7 +226,8 @@ const Storage = {
       const id = Array.isArray(data.favorites) ? data.favorites[index] : null;
       return typeof id === 'string' ? id : null;
     });
-    return { items, lists, favorites, skipped: data.items.length - items.length };
+    // Eski yedeklerde "goals" yoktur; o zaman boş sayılır
+    return { items, lists, favorites, goals: cleanGoals(data.goals), skipped: data.items.length - items.length };
   },
 
   // parseBackup'tan gelen veriyi kaydeder. mode: 'merge' (mevcutlar korunur, aynı id'liler yedektekiyle güncellenir)
@@ -215,6 +252,10 @@ const Storage = {
       const slot = favorites[index] === null ? index : favorites.indexOf(null);
       if (slot !== -1) favorites[slot] = id;
     });
+
+    // Hedefler: birleştirmede aynı yılın hedefi yedektekiyle güncellenir, değiştirmede yedektekiler kalır
+    const goals = { ...(merge ? this.getGoals() : {}), ...parsed.goals };
+    localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
 
     this.saveAll([...items.values()]);
     this.saveLists(cleanLists);

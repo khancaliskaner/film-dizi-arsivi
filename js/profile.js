@@ -48,6 +48,11 @@ const Profile = (() => {
     ].map(([label, value]) => `
       <div class="stat-tile"><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div>`).join('');
 
+    // Bu yılın hedefi (hedef yoksa İstatistik'e yönlendiren küçük bir davet)
+    document.getElementById('profile-goal-title').textContent = `${thisYear} hedefi`;
+    document.getElementById('profile-goal').innerHTML = Stats.goalSummaryHtml(Number(thisYear)) ||
+      `<p class="hint">Bu yıl için henüz hedef koymadın. <a class="watch-link" href="#istatistik">Hedef koy →</a></p>`;
+
     // En son beğenilenler (izleme tarihine göre)
     liked.sort((a, b) => (b.watchedDate || b.createdAt).localeCompare(a.watchedDate || a.createdAt));
     likedEl.innerHTML = liked.length

@@ -81,6 +81,8 @@ const Stats = (() => {
       tile(topGenre ? topGenre[0] : '—', 'En çok izlenen tür', topGenre ? `${topGenre[1]} yapım` : 'TMDB ile eklenen kayıtlarda görünür', true)
     ].join('');
 
+    drawGoal();
+
     // Aylık izleme grafiği
     const perMonth = new Array(12).fill(0);
     for (const item of items) perMonth[Number(item.watchedDate.slice(5, 7)) - 1]++;
@@ -114,6 +116,109 @@ const Stats = (() => {
     noteEl.textContent = undated ? `${undated} izlenen kaydın izleme tarihi girilmemiş, bu yüzden istatistiğe katılmadı.` : '';
     noteEl.hidden = !undated;
   }
+
+  // ---------- Yıllık hedef ----------
+  const goalCard = document.getElementById('goal-card');
+  const GOAL_TYPES = { hepsi: 'Film ve dizi', film: 'Sadece film', dizi: 'Sadece dizi' };
+  const GOAL_UNIT = { hepsi: 'yapım', film: 'film', dizi: 'dizi' };
+  let editingGoal = false;
+
+  // Bir yılın hedef durumu: izlenen sayı, kalan, yüzde… Hedef konmamışsa null.
+  function goalProgress(y) {
+    const goal = Storage.getGoal(y);
+    if (!goal) return null;
+    const done = Storage.getAll().filter(item =>
+      item.status === 'izledim' && (item.watchedDate || '').startsWith(String(y)) && (goal.type === 'hepsi' || item.type === goal.type)
+    ).length;
+    return {
+      goal, done, unit: GOAL_UNIT[goal.type],
+      percent: Math.min(100, Math.round((done / goal.count) * 100)),
+      remaining: Math.max(0, goal.count - done),
+      reached: done >= goal.count
+    };
+  }
+
+  // Durum cümleleri: kalan sayı, haftalık gereken tempo ve (yıl içindeyse) yıl sonu tahmini
+  function goalLines(y, p) {
+    if (p.reached) return [`🎉 Hedefe ulaştın!${p.done > p.goal.count ? ` (${p.done - p.goal.count} tane fazlasıyla)` : ''}`];
+    const lines = [`${p.remaining} ${p.unit} kaldı`];
+    const now = new Date();
+    if (y === now.getFullYear()) {
+      const start = new Date(y, 0, 1);
+      const end = new Date(y + 1, 0, 1);
+      const daysLeft = Math.max(1, Math.ceil((end - now) / 864e5));
+      lines[0] += ` · yıl sonuna kadar haftada ~${format(p.remaining / (daysLeft / 7))} ${p.unit} izlemen yeter`;
+      const passed = (now - start) / (end - start);
+      // Yılın ilk günlerinde tahmin saçma çıkar; en az ~2 hafta geçmiş olsun
+      if (p.done > 0 && passed > 0.04) lines.push(`Şu anki hızla yıl sonunda ~${Math.round(p.done / passed)} ${p.unit}`);
+    }
+    return lines;
+  }
+
+  // Sayı, ilerleme çubuğu ve durum cümleleri (İstatistik kartı ve Profil ortak kullanır)
+  function goalBodyHtml(y, p) {
+    return `
+      <p class="goal-number"><strong>${p.done}</strong> / ${p.goal.count} ${p.unit} <span class="muted">· %${p.percent}</span></p>
+      <div class="goal-bar" role="progressbar" aria-label="Yıllık hedef ilerlemesi" aria-valuemin="0"
+           aria-valuemax="${p.goal.count}" aria-valuenow="${Math.min(p.done, p.goal.count)}"><span style="width:${p.percent}%"></span></div>
+      <p class="chart-readout">${goalLines(y, p).map(escapeHtml).join('<br>')}</p>`;
+  }
+
+  // Profil sayfası için özet: hedef yoksa boş metin döner
+  function goalSummaryHtml(y) {
+    const p = goalProgress(y);
+    return p ? goalBodyHtml(y, p) + '<a class="watch-link" href="#istatistik">Ayrıntılar ve değiştir →</a>' : '';
+  }
+
+  function drawGoal() {
+    const y = Number(year);
+    const p = goalProgress(y);
+
+    if (p && !editingGoal) {
+      goalCard.innerHTML = `
+        <h3>${y} yıllık hedef <span class="muted">· ${GOAL_TYPES[p.goal.type]}</span></h3>
+        ${goalBodyHtml(y, p)}
+        <div class="backup-actions">
+          <button type="button" class="btn btn-small" data-goal="edit">Hedefi değiştir</button>
+          <button type="button" class="btn btn-small btn-danger" data-goal="remove">Kaldır</button>
+        </div>`;
+      return;
+    }
+
+    goalCard.innerHTML = `
+      <h3>${y} yıllık hedef</h3>
+      <p class="chart-readout">${y} yılında kaç yapım izlemek istiyorsun?</p>
+      <form class="goal-form" id="goal-form">
+        <input type="number" id="goal-count" min="1" max="9999" step="1" required inputmode="numeric" placeholder="ör. 100"
+               value="${p ? p.goal.count : ''}" aria-label="Hedef sayısı">
+        <select id="goal-type" aria-label="Neler sayılsın">
+          ${Object.entries(GOAL_TYPES).map(([value, label]) => `<option value="${value}" ${p && p.goal.type === value ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+        ${p ? '<button type="button" class="btn" data-goal="cancel">Vazgeç</button>' : ''}
+      </form>`;
+  }
+
+  goalCard.addEventListener('click', event => {
+    const action = event.target.closest('[data-goal]')?.dataset.goal;
+    if (!action) return;
+    if (action === 'edit') editingGoal = true;
+    else if (action === 'cancel') editingGoal = false;
+    else if (action === 'remove') {
+      if (!confirm(`${year} yılı hedefi silinsin mi?`)) return;
+      Storage.setGoal(year, null);
+    }
+    drawGoal();
+  });
+
+  goalCard.addEventListener('submit', event => {
+    event.preventDefault();
+    const count = Number(document.getElementById('goal-count').value);
+    if (!Number.isInteger(count) || count < 1 || count > 9999) return;
+    Storage.setGoal(year, { count, type: document.getElementById('goal-type').value });
+    editingGoal = false;
+    drawGoal();
+  });
 
   // ---------- Paylaşım metni ----------
   // Seçili yılın izlediklerini ay ay listeleyen, mesajlaşma uygulamalarına yapıştırılabilir düz metin
@@ -183,6 +288,7 @@ const Stats = (() => {
 
   yearSelect.addEventListener('change', () => {
     year = yearSelect.value;
+    editingGoal = false;
     draw();
   });
 
@@ -197,6 +303,7 @@ const Stats = (() => {
     // Şu an seçili yıl ve o yılın izlenen kayıtları (paylaşım için)
     current() {
       return shown;
-    }
+    },
+    goalSummaryHtml
   };
 })();

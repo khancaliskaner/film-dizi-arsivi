@@ -953,6 +953,46 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .mode-row input { margin-top: 4px; accent-color: var(--accent); }
 .mode-row:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 
+/* ---------- Yıllık hedef ---------- */
+.goal-card h3 .muted { font-size: 0.85rem; font-weight: 400; }
+.goal-number { margin: 8px 0; font-size: 1.1rem; }
+.goal-number strong { font-size: 1.8rem; font-weight: 800; }
+
+.goal-bar {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.goal-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.goal-card .chart-readout,
+.profile-goal .chart-readout { margin: 10px 0 8px; }
+.goal-card .backup-actions { margin-top: 4px; }
+.profile-goal { max-width: 560px; margin-bottom: 28px; }
+
+.goal-form { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.goal-form input,
+.goal-form select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.goal-form input { width: 120px; }
+
 /* ---------- Benzer yapımlar şeridi ve "Sana özel" nedeni ---------- */
 .similar-list {
   list-style: none;
