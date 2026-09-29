@@ -116,11 +116,23 @@ const Discover = (() => {
     return map;
   }
 
+  // İlk yükleme sırasında boş ekran yerine gri iskelet kartlar
+  function skeletonHtml() {
+    const card = `
+      <article class="card skeleton" aria-hidden="true">
+        <div class="poster"></div>
+        <div class="card-body"><div class="line"></div><div class="line short"></div></div>
+      </article>`;
+    return card.repeat(12);
+  }
+
   function draw() {
     const owned = ownedMap();
-    gridEl.innerHTML = visibleItems()
-      .map(({ item, index }) => cardHtml(item, index, owned.has(item.tmdbType + ':' + item.tmdbId)))
-      .join('');
+    gridEl.innerHTML = state.loading && !state.items.length
+      ? skeletonHtml()
+      : visibleItems()
+        .map(({ item, index }) => cardHtml(item, index, owned.has(item.tmdbType + ':' + item.tmdbId)))
+        .join('');
     moreBtn.hidden = state.loading || !state.items.length || state.page >= state.totalPages;
 
     for (const button of kindBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.kind === state.kind);
