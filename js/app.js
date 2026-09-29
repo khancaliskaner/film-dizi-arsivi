@@ -12,7 +12,18 @@ const PAGES = {
   },
   kesfet: {
     title: 'Keşfet',
-    discover: true // içeriği js/discover.js çizer
+    subtitle: "TMDB'deki popüler ve en beğenilen yapımlar",
+    view: Discover // içeriği js/discover.js çizer
+  },
+  gunluk: {
+    title: 'Günlük',
+    subtitle: 'İzlediklerin, izleme tarihine göre',
+    view: Diary // içeriği js/diary.js çizer
+  },
+  istatistik: {
+    title: 'İstatistik',
+    subtitle: 'Yıllık izleme özetin',
+    view: Stats // içeriği js/stats.js çizer
   },
   arsiv: {
     title: 'Arşiv',
@@ -176,17 +187,19 @@ function render() {
     link.classList.toggle('active', link.dataset.page === pageName);
   });
 
-  // Keşfet sayfası kendi içeriğini çizer; arşiv listesi ve araç çubuğu gizlenir
-  if (page.discover) {
+  // Keşfet, Günlük ve İstatistik kendi içeriğini çizer; arşiv listesi ve araç çubuğu gizlenir
+  for (const view of [Discover, Diary, Stats]) {
+    if (view !== page.view) view.hide();
+  }
+  if (page.view) {
     toolbar.hidden = true;
     grid.innerHTML = '';
     emptyText.hidden = true;
     document.getElementById('page-title').textContent = page.title;
-    document.getElementById('page-subtitle').textContent = "TMDB'deki popüler ve en beğenilen yapımlar";
-    Discover.show();
+    document.getElementById('page-subtitle').textContent = page.subtitle;
+    page.view.show();
     return;
   }
-  Discover.hide();
 
   const pageItems = Storage.getAll().filter(page.filter);
   const total = pageItems.length;
