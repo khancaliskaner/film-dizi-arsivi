@@ -623,6 +623,7 @@ document.getElementById('settings-btn').addEventListener('click', () => {
   keyInput.value = Storage.getSetting('tmdbKey') || '';
   setSettingsStatus(!keyInput.value && window.CONFIG?.TMDB_API_KEY
     ? 'Şu an config.js dosyasındaki anahtar kullanılıyor.' : '');
+  Backup.refresh();
   settingsDialog.showModal();
 });
 

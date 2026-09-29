@@ -836,6 +836,26 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-size: 0.7rem;
 }
 
+/* ---------- Yedekleme (Ayarlar penceresinde) ---------- */
+.backup { border-top: 1px solid var(--border); }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.import-choice { display: flex; flex-direction: column; gap: 10px; }
+.import-choice p { margin: 0; font-weight: 600; }
+
+.dialog-form .mode-row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.mode-row input { margin-top: 4px; accent-color: var(--accent); }
+.mode-row:has(input:checked) { border-color: var(--accent); background: rgba(0, 192, 48, 0.08); }
+
 /* ---------- Nereden izlenir? ---------- */
 .has-detail { cursor: pointer; }
 .card-title.has-detail:hover { text-decoration: underline; }

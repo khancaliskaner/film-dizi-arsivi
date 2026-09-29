@@ -6,6 +6,48 @@ const SETTINGS_KEY = 'arsiv_ayarlar';
 const LISTS_KEY = 'arsiv_listeler';
 const FAVORITES_KEY = 'arsiv_favoriler';
 
+const BACKUP_APP = 'kaan-nis-secimleri';
+
+// Yedek dosyasından gelen bir kaydı kontrol eder ve sadece bilinen alanları alır; geçersizse null döner.
+function cleanItem(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (typeof raw.id !== 'string' || !raw.id || typeof raw.title !== 'string' || !raw.title.trim()) return null;
+  if (!['film', 'dizi'].includes(raw.type) || !['izledim', 'izlenecek'].includes(raw.status)) return null;
+
+  const text = (value, max) => (typeof value === 'string' ? value.slice(0, max) : '');
+  const rating = Number(raw.rating);
+  return {
+    id: raw.id,
+    title: raw.title.trim().slice(0, 150),
+    type: raw.type,
+    year: Number.isInteger(raw.year) ? raw.year : null,
+    status: raw.status,
+    rating: rating >= 0.5 && rating <= 5 && (rating * 2) % 1 === 0 ? rating : 0,
+    watchedDate: /^\d{4}-\d{2}-\d{2}$/.test(raw.watchedDate) ? raw.watchedDate : '',
+    review: text(raw.review, 1000),
+    liked: raw.liked === true,
+    tmdbId: Number.isInteger(raw.tmdbId) ? raw.tmdbId : null,
+    tmdbType: ['movie', 'tv'].includes(raw.tmdbType) ? raw.tmdbType : '',
+    poster: /^\/[\w.-]+$/.test(raw.poster) ? raw.poster : '',
+    overview: text(raw.overview, 3000),
+    genres: Array.isArray(raw.genres) ? raw.genres.filter(genre => typeof genre === 'string').slice(0, 10) : [],
+    createdAt: text(raw.createdAt, 40) || new Date().toISOString(),
+    ...(typeof raw.updatedAt === 'string' ? { updatedAt: raw.updatedAt.slice(0, 40) } : {})
+  };
+}
+
+// Aynısı özel listeler için.
+function cleanList(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (typeof raw.id !== 'string' || !raw.id || typeof raw.name !== 'string' || !raw.name.trim()) return null;
+  return {
+    id: raw.id,
+    name: raw.name.trim().slice(0, 60),
+    itemIds: Array.isArray(raw.itemIds) ? raw.itemIds.filter(id => typeof id === 'string') : [],
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt.slice(0, 40) : ''
+  };
+}
+
 const Storage = {
   // Bütün kayıtları dizi olarak döndürür. Veri bozuksa boş dizi döner.
   getAll() {
@@ -120,6 +162,63 @@ const Storage = {
     const ids = this.getFavorites().map(id => (id === itemId ? null : id));
     ids[slot] = itemId;
     this.saveFavorites(ids);
+  },
+
+  // ---------- Yedekleme (JSON dışa / içe aktarma) ----------
+  // Kayıtlar, listeler ve favoriler yedeğe girer. Ayarlar (TMDB anahtarı) girmez.
+  exportAll() {
+    return {
+      app: BACKUP_APP,
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      items: this.getAll(),
+      lists: this.getLists(),
+      favorites: this.getFavorites()
+    };
+  },
+
+  // Yedek dosyasının içeriğini kontrol edip temizler; henüz hiçbir şeyi kaydetmez.
+  // Geçersiz kayıtlar atlanır. Dosya bir yedek değilse hata fırlatır.
+  parseBackup(data) {
+    if (!data || data.app !== BACKUP_APP || !Array.isArray(data.items)) {
+      throw new Error('Bu dosya bir arşiv yedeği gibi görünmüyor.');
+    }
+    const items = data.items.map(cleanItem).filter(Boolean);
+    if (data.items.length && !items.length) throw new Error('Yedekteki kayıtlar okunamadı.');
+    const lists = (Array.isArray(data.lists) ? data.lists : []).map(cleanList).filter(Boolean);
+    const favorites = Array.from({ length: 4 }, (_, index) => {
+      const id = Array.isArray(data.favorites) ? data.favorites[index] : null;
+      return typeof id === 'string' ? id : null;
+    });
+    return { items, lists, favorites, skipped: data.items.length - items.length };
+  },
+
+  // parseBackup'tan gelen veriyi kaydeder. mode: 'merge' (mevcutlar korunur, aynı id'liler yedektekiyle güncellenir)
+  // ya da 'replace' (mevcut her şey silinir, yerine yedek gelir).
+  importParsed(parsed, mode) {
+    const merge = mode === 'merge';
+
+    const items = new Map(merge ? this.getAll().map(item => [item.id, item]) : []);
+    for (const item of parsed.items) items.set(item.id, item);
+
+    const lists = new Map(merge ? this.getLists().map(list => [list.id, list]) : []);
+    for (const list of parsed.lists) lists.set(list.id, list);
+
+    // Listelerde ve favorilerde artık var olmayan kayıtlara işaret eden id kalmasın
+    const exists = id => items.has(id);
+    const cleanLists = [...lists.values()].map(list => ({ ...list, itemIds: list.itemIds.filter(exists) }));
+
+    // Favoriler yedekteki kutusuna yerleşir; o kutu doluysa (birleştirmede) ilk boş kutuya
+    const favorites = merge ? this.getFavorites() : [null, null, null, null];
+    parsed.favorites.forEach((id, index) => {
+      if (!id || !exists(id) || favorites.includes(id)) return;
+      const slot = favorites[index] === null ? index : favorites.indexOf(null);
+      if (slot !== -1) favorites[slot] = id;
+    });
+
+    this.saveAll([...items.values()]);
+    this.saveLists(cleanLists);
+    this.saveFavorites(favorites.map(id => (id && exists(id) ? id : null)));
   },
 
   // ---------- Ayarlar (ör. TMDB anahtarı) ----------
