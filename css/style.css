@@ -897,6 +897,17 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .check-filter input { width: 20px; height: 20px; accent-color: var(--accent); }
 .check-filter:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 
+/* ---------- Çevrimdışı uyarısı ve uygulama kurulumu ---------- */
+.offline-bar {
+  padding: 6px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, #e5b800 20%, var(--bg));
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.appinstall { border-top: 1px solid var(--border); }
+
 /* ---------- Görünüm / renk paleti (Ayarlar penceresinde) ---------- */
 .appearance { border-top: 1px solid var(--border); }
 .swatch-group { display: flex; flex-direction: column; gap: 8px; }

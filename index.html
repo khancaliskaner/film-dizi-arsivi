@@ -8,6 +8,11 @@
   <meta name="theme-color" content="#14181c">
   <link rel="icon" type="image/png" sizes="64x64" href="img/icon-64.png">
   <link rel="apple-touch-icon" href="img/icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Niş Seçimler">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <!-- Linki WhatsApp gibi uygulamalarda paylaşınca görünen önizleme -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="KAAN'IN NİŞ SEÇİMLERİ">
@@ -39,6 +44,7 @@
         <button class="btn btn-primary" id="add-btn">+ Ekle</button>
       </div>
     </div>
+    <div class="offline-bar" id="offline-bar" role="status" hidden>Çevrimdışısın: arşivin çalışıyor; Keşfet ve yeni afişler için internet gerekir.</div>
   </header>
 
   <main class="container">
@@ -401,6 +407,15 @@
       </div>
     </div>
 
+    <!-- Uygulama olarak kurma: js/pwa.js -->
+    <div class="dialog-form appinstall">
+      <h2>Uygulama olarak kur</h2>
+      <p class="hint" id="install-text"></p>
+      <div class="backup-actions">
+        <button type="button" class="btn btn-primary" id="install-btn" hidden>Uygulamayı kur</button>
+      </div>
+    </div>
+
     <!-- Yedekleme: js/backup.js -->
     <div class="dialog-form backup">
       <h2>Yedekleme</h2>
@@ -440,5 +455,6 @@
   <script src="js/share.js"></script>
   <script src="js/app.js"></script>
   <script src="js/backup.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

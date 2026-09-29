@@ -640,6 +640,7 @@ document.getElementById('settings-btn').addEventListener('click', () => {
   if (!omdbKeyInput.value && window.CONFIG?.OMDB_API_KEY) fromConfig.push('OMDb');
   setSettingsStatus(fromConfig.length ? `Şu an config.js dosyasındaki ${fromConfig.join(' ve ')} anahtarı kullanılıyor.` : '');
   Backup.refresh();
+  Pwa.refresh();
   settingsDialog.showModal();
 });
 
