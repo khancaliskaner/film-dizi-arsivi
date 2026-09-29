@@ -1,26 +1,34 @@
-// Arayüz mantığı: sayfalar arası geçiş, kartları çizme, ekleme/düzenleme formu ve yarım yıldızlı puanlama.
+// Arayüz mantığı: sayfalar arası geçiş, arama/filtre/sıralama, kartları çizme, ekleme/düzenleme formu ve yarım yıldızlı puanlama.
 
 // ---------- Sayfalar ----------
-// Her sayfa hangi kayıtları, hangi sırayla göstereceğini belirler.
+// Her sayfa hangi kayıtları göstereceğini belirler.
+// toolbar: arama/filtre çubuğu görünsün mü, hide: o sayfada anlamsız olan filtreler.
 const PAGES = {
   ana: {
     title: 'Son İzlenenler',
     empty: 'Henüz bir şey izlemedin. Sağ üstteki "+ Ekle" ile başla.',
     filter: item => item.status === 'izledim',
-    sort: byWatchedDateDesc,
     limit: 12
+  },
+  arsiv: {
+    title: 'Arşiv',
+    empty: 'Arşivin boş. Sağ üstteki "+ Ekle" ile başla.',
+    filter: () => true,
+    toolbar: true
   },
   izlediklerim: {
     title: 'İzlediklerim',
     empty: 'İzlediğin film veya dizi yok.',
     filter: item => item.status === 'izledim',
-    sort: byWatchedDateDesc
+    toolbar: true,
+    hide: ['status']
   },
   liste: {
     title: 'İzleme Listem',
     empty: 'İzleme listen boş.',
     filter: item => item.status === 'izlenecek',
-    sort: (a, b) => b.createdAt.localeCompare(a.createdAt)
+    toolbar: true,
+    hide: ['status', 'rating']
   }
 };
 
@@ -30,6 +38,13 @@ function byWatchedDateDesc(a, b) {
   const db = b.watchedDate || b.createdAt;
   return db.localeCompare(da);
 }
+
+// Sıralama seçenekleri (araç çubuğundaki "sort" kutusunun değerleri)
+const SORTS = {
+  date: byWatchedDateDesc,
+  rating: (a, b) => (b.rating || 0) - (a.rating || 0) || byWatchedDateDesc(a, b),
+  title: (a, b) => a.title.localeCompare(b.title, 'tr')
+};
 
 function currentPage() {
   const name = location.hash.slice(1);
@@ -69,27 +84,115 @@ function today() {
   return now.toISOString().slice(0, 10);
 }
 
+// ---------- Arama, filtre, sıralama ----------
+const toolbar = document.getElementById('toolbar');
+const controls = {
+  search: document.getElementById('search'),
+  type: document.getElementById('filter-type'),
+  status: document.getElementById('filter-status'),
+  rating: document.getElementById('filter-rating'),
+  year: document.getElementById('filter-year'),
+  sort: document.getElementById('sort')
+};
+const DEFAULT_FILTERS = { search: '', type: '', status: '', rating: '', year: '', sort: 'date' };
+let filters = { ...DEFAULT_FILTERS };
+
+function applyFilters(items) {
+  const query = filters.search.trim().toLocaleLowerCase('tr');
+  return items.filter(item => {
+    if (query && !item.title.toLocaleLowerCase('tr').includes(query)) return false;
+    if (filters.type && item.type !== filters.type) return false;
+    if (filters.status && item.status !== filters.status) return false;
+    if (filters.year && String(item.year) !== filters.year) return false;
+    if (filters.rating === 'none' && item.rating) return false;
+    if (filters.rating && filters.rating !== 'none' && !(item.rating >= Number(filters.rating))) return false;
+    return true;
+  });
+}
+
+// Sıralama dışında herhangi bir filtre seçili mi?
+function hasActiveFilters() {
+  return Object.keys(DEFAULT_FILTERS).some(key => key !== 'sort' && filters[key] !== DEFAULT_FILTERS[key]);
+}
+
+// Yıl kutusunu, o sayfadaki kayıtlarda geçen yıllarla doldurur.
+function fillYearOptions(items) {
+  const years = [...new Set(items.map(item => item.year).filter(Boolean))].sort((a, b) => b - a);
+  controls.year.innerHTML = '<option value="">Tüm yıllar</option>' +
+    years.map(year => `<option value="${year}">${year}</option>`).join('');
+  if (!years.includes(Number(filters.year))) filters.year = '';
+  controls.year.value = filters.year;
+}
+
+// Araç çubuğunu sayfaya göre ayarlar: anlamsız filtreleri gizler, seçili değerleri kutulara yazar.
+function setupToolbar(page) {
+  const hide = page.hide || [];
+  controls.status.hidden = hide.includes('status');
+  controls.rating.hidden = hide.includes('rating');
+  controls.sort.querySelector('[value="rating"]').hidden = hide.includes('rating');
+  controls.sort.querySelector('[value="date"]').textContent =
+    page === PAGES.liste ? 'En yeni eklenen' : 'En yeni izlenen';
+
+  for (const key in controls) {
+    if (key !== 'year') controls[key].value = filters[key];
+  }
+}
+
+// Kutulardaki her değişiklikte filtreleri güncelle ve listeyi yeniden çiz
+for (const key in controls) {
+  controls[key].addEventListener(key === 'search' ? 'input' : 'change', () => {
+    filters[key] = controls[key].value;
+    render();
+  });
+}
+
+document.getElementById('clear-filters').addEventListener('click', () => {
+  filters = { ...DEFAULT_FILTERS, sort: filters.sort };
+  render();
+  controls.search.focus();
+});
+
 // ---------- Listeleme ----------
 const grid = document.getElementById('grid');
 const emptyText = document.getElementById('empty');
+let lastPageName = null;
 
 function render() {
   const pageName = currentPage();
   const page = PAGES[pageName];
 
+  // Başka bir sayfaya geçildiyse filtreleri sıfırla
+  if (pageName !== lastPageName) {
+    filters = { ...DEFAULT_FILTERS };
+    lastPageName = pageName;
+    window.scrollTo(0, 0);
+  }
+
   document.querySelectorAll('.nav a').forEach(link => {
     link.classList.toggle('active', link.dataset.page === pageName);
   });
 
-  let items = Storage.getAll().filter(page.filter).sort(page.sort);
-  const total = items.length;
-  if (page.limit) items = items.slice(0, page.limit);
+  const pageItems = Storage.getAll().filter(page.filter);
+  const total = pageItems.length;
+  let items;
 
+  toolbar.hidden = !page.toolbar || total === 0;
+  if (page.toolbar) {
+    setupToolbar(page);
+    fillYearOptions(pageItems);
+    items = applyFilters(pageItems).sort(SORTS[filters.sort]);
+  } else {
+    items = pageItems.sort(byWatchedDateDesc).slice(0, page.limit);
+  }
+
+  const filtered = page.toolbar && hasActiveFilters();
+  document.getElementById('clear-filters').hidden = !filtered;
   document.getElementById('page-title').textContent = page.title;
-  document.getElementById('page-subtitle').textContent = total ? `${total} kayıt` : '';
+  document.getElementById('page-subtitle').textContent =
+    !total ? '' : filtered ? `${total} kayıttan ${items.length} tanesi gösteriliyor` : `${total} kayıt`;
 
   grid.innerHTML = items.map(cardHtml).join('');
-  emptyText.textContent = page.empty;
+  emptyText.textContent = total ? 'Aramana veya filtrelerine uyan kayıt yok.' : page.empty;
   emptyText.hidden = items.length > 0;
 }
 

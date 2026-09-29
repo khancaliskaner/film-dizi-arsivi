@@ -13,6 +13,7 @@
       <a href="#ana" class="logo">KAAN'IN NİŞ SEÇİMLERİ</a>
       <nav class="nav">
         <a href="#ana" data-page="ana">Ana Sayfa</a>
+        <a href="#arsiv" data-page="arsiv">Arşiv</a>
         <a href="#izlediklerim" data-page="izlediklerim">İzlediklerim</a>
         <a href="#liste" data-page="liste">İzleme Listem</a>
       </nav>
@@ -23,6 +24,41 @@
   <main class="container">
     <h1 class="page-title" id="page-title"></h1>
     <p class="page-subtitle" id="page-subtitle"></p>
+
+    <!-- Arama, filtre ve sıralama çubuğu -->
+    <div class="toolbar" id="toolbar" hidden>
+      <input type="search" id="search" placeholder="İsme göre ara…" aria-label="İsme göre ara" autocomplete="off">
+      <div class="filters">
+        <select id="filter-type" aria-label="Tür">
+          <option value="">Film ve dizi</option>
+          <option value="film">Sadece film</option>
+          <option value="dizi">Sadece dizi</option>
+        </select>
+        <select id="filter-status" aria-label="Durum">
+          <option value="">Tüm durumlar</option>
+          <option value="izledim">İzledim</option>
+          <option value="izlenecek">İzlemek istiyorum</option>
+        </select>
+        <select id="filter-rating" aria-label="Puan">
+          <option value="">Tüm puanlar</option>
+          <option value="5">★★★★★</option>
+          <option value="4">★★★★ ve üstü</option>
+          <option value="3">★★★ ve üstü</option>
+          <option value="2">★★ ve üstü</option>
+          <option value="1">★ ve üstü</option>
+          <option value="none">Puansız</option>
+        </select>
+        <select id="filter-year" aria-label="Yıl">
+          <option value="">Tüm yıllar</option>
+        </select>
+        <select id="sort" aria-label="Sıralama">
+          <option value="date">En yeni izlenen</option>
+          <option value="rating">En yüksek puan</option>
+          <option value="title">Alfabetik (A-Z)</option>
+        </select>
+        <button type="button" class="btn btn-small" id="clear-filters" hidden>Filtreleri temizle</button>
+      </div>
+    </div>
     <div class="grid" id="grid"></div>
     <p class="empty" id="empty" hidden></p>
   </main>
