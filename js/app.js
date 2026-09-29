@@ -1,4 +1,4 @@
-// Arayüz mantığı: sayfalar arası geçiş, arama/filtre/sıralama, kartları çizme, ekleme/düzenleme formu ve yarım yıldızlı puanlama.
+// Arayüz mantığı: sayfalar arası geçiş, arama/filtre/sıralama, kartlar, ekleme/düzenleme formu (TMDB aramasıyla), yarım yıldızlı puanlama ve ayarlar.
 
 // ---------- Sayfalar ----------
 // Her sayfa hangi kayıtları göstereceğini belirler.
@@ -198,14 +198,20 @@ function render() {
 
 function cardHtml(item) {
   const hue = titleHue(item.title);
-  const meta = [item.year, item.type === 'dizi' ? 'Dizi' : 'Film'].filter(Boolean).join(' · ');
+  const genre = item.genres?.[0];
+  const meta = [item.year, item.type === 'dizi' ? 'Dizi' : 'Film', genre].filter(Boolean).join(' · ');
   const date = item.status === 'izledim' && item.watchedDate ? formatDate(item.watchedDate) : '';
+  // Afiş varsa renkli yer tutucunun üstüne biner; yüklenemezse silinir ve yer tutucu görünür.
+  const poster = item.poster
+    ? `<img class="poster-img" src="${Tmdb.posterUrl(item.poster)}" alt="${escapeHtml(item.title)} afişi" loading="lazy">`
+    : '';
 
   return `
     <article class="card">
       <div class="poster" style="--hue:${hue}">
         <span class="poster-letter">${escapeHtml(item.title.charAt(0).toUpperCase())}</span>
         <span class="poster-title">${escapeHtml(item.title)}</span>
+        ${poster}
         <span class="badge">${item.type === 'dizi' ? 'Dizi' : 'Film'}</span>
       </div>
       <div class="card-body">
@@ -221,6 +227,11 @@ function cardHtml(item) {
       </div>
     </article>`;
 }
+
+// İnternet yoksa afiş yüklenemez: resmi kaldır, altındaki renkli yer tutucu görünsün
+grid.addEventListener('error', event => {
+  if (event.target.classList.contains('poster-img')) event.target.remove();
+}, true);
 
 // Kartlardaki Düzenle / Sil butonları (tek bir dinleyiciyle hepsini yakalıyoruz)
 grid.addEventListener('click', event => {
@@ -276,6 +287,153 @@ const fields = form.elements; // formdaki alanlara isimle erişmek için
 const formError = document.getElementById('form-error');
 const watchedFields = document.getElementById('watched-fields');
 let editingId = null;
+let tmdbData = null; // TMDB'den seçilen yapımın bilgileri (afiş, özet, kategoriler); elle eklemede boş
+
+// ---------- TMDB arama (form içinde) ----------
+const tmdbHint = document.getElementById('tmdb-hint');
+const tmdbResults = document.getElementById('tmdb-results');
+const tmdbPreview = document.getElementById('tmdb-preview');
+const previewPoster = document.getElementById('preview-poster');
+let searchTimer = null;
+let searchController = null; // süren aramayı iptal edebilmek için
+let lastResults = [];
+
+function showHint(message) {
+  tmdbHint.textContent = message;
+  tmdbHint.hidden = !message;
+}
+
+function clearResults() {
+  tmdbResults.innerHTML = '';
+  tmdbResults.hidden = true;
+}
+
+function stopSearch() {
+  clearTimeout(searchTimer);
+  searchController?.abort();
+  searchController = null;
+}
+
+// Hata ne olursa olsun kullanıcıya sade bir mesaj göster
+function tmdbErrorMessage(error) {
+  if (error.message.startsWith('TMDB')) return error.message;
+  return "TMDB'ye ulaşılamadı (internet bağlantını kontrol et).";
+}
+
+fields.title.addEventListener('input', () => {
+  stopSearch();
+  const query = fields.title.value.trim();
+  if (!Tmdb.isReady()) return;
+  if (query.length < 2) {
+    clearResults();
+    showHint('');
+    return;
+  }
+  // Her tuşta değil, yazmayı bırakınca ara (0.4 saniye bekle)
+  searchTimer = setTimeout(() => runSearch(query), 400);
+});
+
+async function runSearch(query) {
+  const controller = new AbortController();
+  searchController = controller;
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  showHint('Aranıyor…');
+
+  try {
+    const results = await Tmdb.search(query, controller.signal);
+    if (controller !== searchController) return; // bu arada yeni bir arama başladı
+    renderResults(results);
+    showHint(results.length ? '' : "TMDB'de sonuç bulunamadı. Elle eklemeye devam edebilirsin.");
+  } catch (error) {
+    if (controller !== searchController) return;
+    clearResults();
+    showHint(tmdbErrorMessage(error) + ' Elle eklemeye devam edebilirsin.');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function renderResults(results) {
+  lastResults = results;
+  tmdbResults.innerHTML = results.map((result, index) => {
+    const meta = [result.year, result.tmdbType === 'tv' ? 'Dizi' : 'Film'];
+    if (result.originalTitle && result.originalTitle !== result.title) meta.push(result.originalTitle);
+    const thumb = result.poster
+      ? `<img src="${Tmdb.posterUrl(result.poster, 'w92')}" alt="" loading="lazy">`
+      : '<span class="thumb-empty"></span>';
+    return `
+      <li>
+        <button type="button" class="tmdb-result" data-index="${index}">
+          ${thumb}
+          <span class="result-text">
+            <strong>${escapeHtml(result.title)}</strong>
+            <span class="muted">${escapeHtml(meta.filter(Boolean).join(' · '))}</span>
+          </span>
+        </button>
+      </li>`;
+  }).join('');
+  tmdbResults.hidden = results.length === 0;
+}
+
+tmdbResults.addEventListener('click', event => {
+  const button = event.target.closest('.tmdb-result');
+  if (button) selectResult(lastResults[button.dataset.index]);
+});
+
+// Küçük afiş yüklenemezse gizle
+tmdbResults.addEventListener('error', event => {
+  if (event.target.tagName === 'IMG') event.target.style.visibility = 'hidden';
+}, true);
+
+// Sonuç seçilince formu doldur, sonra kategorileri ayrıca getir
+async function selectResult(result) {
+  stopSearch();
+  clearResults();
+  showHint('');
+  fields.title.value = result.title;
+  fields.type.value = result.tmdbType === 'tv' ? 'dizi' : 'film';
+  if (result.year) fields.year.value = result.year;
+  setTmdbData({
+    tmdbId: result.tmdbId,
+    tmdbType: result.tmdbType,
+    poster: result.poster,
+    overview: result.overview,
+    genres: []
+  });
+
+  try {
+    const details = await Tmdb.details(result.tmdbType, result.tmdbId);
+    if (tmdbData?.tmdbId !== result.tmdbId) return; // bu arada başka bir şey seçildi
+    setTmdbData({
+      ...tmdbData,
+      genres: details.genres,
+      overview: details.overview || tmdbData.overview,
+      poster: details.poster || tmdbData.poster
+    });
+  } catch {
+    // Kategoriler gelmezse sorun değil; afiş ve özet zaten geldi
+  }
+}
+
+// Seçilen yapımın önizlemesini göster (veya bağlantı kaldırıldıysa gizle)
+function setTmdbData(data) {
+  tmdbData = data;
+  tmdbPreview.hidden = !data;
+  if (!data) return;
+
+  if (data.poster) {
+    previewPoster.src = Tmdb.posterUrl(data.poster, 'w185');
+    previewPoster.hidden = false;
+  } else {
+    previewPoster.removeAttribute('src');
+    previewPoster.hidden = true;
+  }
+  document.getElementById('preview-genres').textContent = data.genres.join(', ');
+  document.getElementById('preview-overview').textContent = data.overview || 'Özet yok.';
+}
+
+previewPoster.addEventListener('error', () => { previewPoster.hidden = true; });
+document.getElementById('unlink-tmdb').addEventListener('click', () => setTmdbData(null));
 
 // "İzlemek istiyorum" seçiliyse puan ve tarih alanlarını gizle
 function updateWatchedFields() {
@@ -286,6 +444,16 @@ function openForm(item = null) {
   editingId = item ? item.id : null;
   form.reset();
   formError.hidden = true;
+  stopSearch();
+  clearResults();
+  showHint(Tmdb.isReady() ? '' : "İpucu: ⚙ Ayarlar'dan TMDB anahtarı eklersen afiş ve bilgiler otomatik gelir.");
+  setTmdbData(item?.tmdbId ? {
+    tmdbId: item.tmdbId,
+    tmdbType: item.tmdbType,
+    poster: item.poster || '',
+    overview: item.overview || '',
+    genres: item.genres || []
+  } : null);
   document.getElementById('form-title').textContent = item ? 'Kaydı Düzenle' : 'Yeni Kayıt';
 
   if (item) {
@@ -332,7 +500,9 @@ form.addEventListener('submit', event => {
     status: fields.status.value,
     rating: watched ? currentRating : 0,
     watchedDate: watched ? fields.watchedDate.value : '',
-    review: fields.review.value.trim()
+    review: fields.review.value.trim(),
+    // TMDB bilgileri (elle eklenen kayıtlarda boş)
+    ...(tmdbData || { tmdbId: null, tmdbType: '', poster: '', overview: '', genres: [] })
   };
 
   if (editingId) Storage.update(editingId, data);
@@ -353,6 +523,48 @@ document.getElementById('add-btn').addEventListener('click', () => openForm());
 // Pencerenin dışındaki koyu alana tıklayınca formu kapat
 dialog.addEventListener('click', event => {
   if (event.target === dialog) dialog.close();
+});
+// Pencere kapanınca süren aramayı durdur ("close" olayı biraz gecikmeli gelir; bu arada form tekrar açıldıysa dokunma)
+dialog.addEventListener('close', () => {
+  if (!dialog.open) stopSearch();
+});
+
+// ---------- Ayarlar (TMDB anahtarı) ----------
+const settingsDialog = document.getElementById('settings-dialog');
+const keyInput = document.getElementById('tmdb-key');
+const settingsStatus = document.getElementById('settings-status');
+
+function setSettingsStatus(message, kind = '') {
+  settingsStatus.textContent = message;
+  settingsStatus.className = 'hint ' + kind;
+  settingsStatus.hidden = !message;
+}
+
+document.getElementById('settings-btn').addEventListener('click', () => {
+  keyInput.value = Storage.getSetting('tmdbKey') || '';
+  setSettingsStatus(!keyInput.value && window.CONFIG?.TMDB_API_KEY
+    ? 'Şu an config.js dosyasındaki anahtar kullanılıyor.' : '');
+  settingsDialog.showModal();
+});
+
+document.getElementById('settings-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const key = keyInput.value.trim();
+  Storage.setSetting('tmdbKey', key);
+
+  if (!Tmdb.isReady()) return setSettingsStatus('Anahtar silindi. Elle ekleme çalışmaya devam eder.');
+  setSettingsStatus('Deneniyor…');
+  try {
+    await Tmdb.test();
+    setSettingsStatus('✓ Bağlantı çalışıyor. Artık başlık yazınca afişler gelecek.', 'ok');
+  } catch (error) {
+    setSettingsStatus(tmdbErrorMessage(error), 'error');
+  }
+});
+
+document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());
+settingsDialog.addEventListener('click', event => {
+  if (event.target === settingsDialog) settingsDialog.close();
 });
 
 // ---------- Başlat ----------

@@ -2,6 +2,7 @@
 // Verileri ileride başka bir yere taşımak istersek sadece bu dosyayı değiştirmek yeterli.
 
 const STORAGE_KEY = 'arsiv_kayitlar';
+const SETTINGS_KEY = 'arsiv_ayarlar';
 
 const Storage = {
   // Bütün kayıtları dizi olarak döndürür. Veri bozuksa boş dizi döner.
@@ -43,5 +44,25 @@ const Storage = {
 
   remove(id) {
     this.saveAll(this.getAll().filter(item => item.id !== id));
+  },
+
+  // ---------- Ayarlar (ör. TMDB anahtarı) ----------
+  getSetting(name) {
+    try {
+      return (JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {})[name];
+    } catch {
+      return undefined;
+    }
+  },
+
+  setSetting(name, value) {
+    let settings;
+    try {
+      settings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+    } catch {
+      settings = {};
+    }
+    settings[name] = value;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }
 };

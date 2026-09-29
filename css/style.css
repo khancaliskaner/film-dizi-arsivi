@@ -255,16 +255,16 @@ dialog {
 
 dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 
-#entry-form {
+.dialog-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 20px;
 }
 
-#entry-form h2 { margin: 0; font-size: 1.25rem; }
+.dialog-form h2 { margin: 0; font-size: 1.25rem; }
 
-#entry-form label,
+.dialog-form label,
 .field {
   display: flex;
   flex-direction: column;
@@ -273,10 +273,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-weight: 600;
 }
 
-#entry-form input[type="text"],
-#entry-form input[type="number"],
-#entry-form input[type="date"],
-#entry-form textarea {
+.dialog-form input[type="text"],
+.dialog-form input[type="number"],
+.dialog-form input[type="date"],
+.dialog-form textarea {
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -287,10 +287,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-weight: 400;
 }
 
-#entry-form textarea { resize: vertical; }
+.dialog-form textarea { resize: vertical; }
 
-#entry-form input:focus,
-#entry-form textarea:focus,
+.dialog-form input:focus,
+.dialog-form textarea:focus,
 .star-input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
@@ -328,7 +328,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-weight: 600;
 }
 
-#entry-form .toggle label {
+.dialog-form .toggle label {
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -343,12 +343,12 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 .toggle input { position: absolute; opacity: 0; pointer-events: none; }
 
-#entry-form .toggle label:has(input:checked) {
+.dialog-form .toggle label:has(input:checked) {
   border-color: var(--accent);
   background: rgba(0, 192, 48, 0.12);
 }
 
-#entry-form .toggle label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+.dialog-form .toggle label:has(input:focus-visible) { outline: 2px solid var(--accent); }
 
 /* Yıldız girişi: gri yıldızların üstüne puan kadar genişlikte yeşil yıldızlar bindiriliyor */
 .star-row {
@@ -392,6 +392,130 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ---------- Üst menü düğmeleri ---------- */
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  width: 44px;
+  padding: 0;
+  font-size: 1.2rem;
+}
+
+/* ---------- Afiş resmi (kartta) ---------- */
+.poster-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- Bilgi / durum mesajları ---------- */
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.hint.ok { color: var(--accent); }
+.hint.error { color: var(--danger); }
+
+/* ---------- TMDB arama sonuçları ---------- */
+.tmdb-results {
+  list-style: none;
+  margin: -6px 0 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.tmdb-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tmdb-result:hover,
+.tmdb-result:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+.tmdb-result img,
+.thumb-empty {
+  flex-shrink: 0;
+  width: 40px;
+  height: 60px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.result-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.result-text .muted { font-size: 0.8rem; }
+
+/* ---------- Seçilen yapımın önizlemesi (formda) ---------- */
+.tmdb-preview {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.tmdb-preview img {
+  flex-shrink: 0;
+  width: 80px;
+  height: 120px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.preview-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.preview-info p { margin: 0; }
+.preview-genres { color: var(--accent); font-size: 0.8rem; font-weight: 600; }
+
+.preview-overview {
+  font-size: 0.85rem;
+  color: #c3ccd5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ---------- Telefon ---------- */
