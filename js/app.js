@@ -396,6 +396,11 @@ function tmdbErrorMessage(error) {
   return "TMDB'ye ulaşılamadı (internet bağlantını kontrol et).";
 }
 
+function omdbErrorMessage(error) {
+  if (error.message.startsWith('OMDb')) return error.message;
+  return "OMDb'ye ulaşılamadı (internet bağlantını kontrol et).";
+}
+
 fields.title.addEventListener('input', () => {
   stopSearch();
   const query = fields.title.value.trim();
@@ -608,9 +613,10 @@ dialog.addEventListener('close', () => {
   if (!dialog.open) stopSearch();
 });
 
-// ---------- Ayarlar (TMDB anahtarı) ----------
+// ---------- Ayarlar (TMDB ve OMDb anahtarları) ----------
 const settingsDialog = document.getElementById('settings-dialog');
 const keyInput = document.getElementById('tmdb-key');
+const omdbKeyInput = document.getElementById('omdb-key');
 const settingsStatus = document.getElementById('settings-status');
 
 function setSettingsStatus(message, kind = '') {
@@ -621,25 +627,38 @@ function setSettingsStatus(message, kind = '') {
 
 document.getElementById('settings-btn').addEventListener('click', () => {
   keyInput.value = Storage.getSetting('tmdbKey') || '';
-  setSettingsStatus(!keyInput.value && window.CONFIG?.TMDB_API_KEY
-    ? 'Şu an config.js dosyasındaki anahtar kullanılıyor.' : '');
+  omdbKeyInput.value = Storage.getSetting('omdbKey') || '';
+  const fromConfig = [];
+  if (!keyInput.value && window.CONFIG?.TMDB_API_KEY) fromConfig.push('TMDB');
+  if (!omdbKeyInput.value && window.CONFIG?.OMDB_API_KEY) fromConfig.push('OMDb');
+  setSettingsStatus(fromConfig.length ? `Şu an config.js dosyasındaki ${fromConfig.join(' ve ')} anahtarı kullanılıyor.` : '');
   Backup.refresh();
   settingsDialog.showModal();
 });
 
+// Kaydet ve dene: iki anahtarı da kaydeder, dolu olanların çalışıp çalışmadığını sırayla dener
 document.getElementById('settings-form').addEventListener('submit', async event => {
   event.preventDefault();
-  const key = keyInput.value.trim();
-  Storage.setSetting('tmdbKey', key);
+  Storage.setSetting('tmdbKey', keyInput.value.trim());
+  Storage.setSetting('omdbKey', omdbKeyInput.value.trim());
 
-  if (!Tmdb.isReady()) return setSettingsStatus('Anahtar silindi. Elle ekleme çalışmaya devam eder.');
   setSettingsStatus('Deneniyor…');
-  try {
-    await Tmdb.test();
-    setSettingsStatus('✓ Bağlantı çalışıyor. Artık başlık yazınca afişler gelecek.', 'ok');
-  } catch (error) {
-    setSettingsStatus(tmdbErrorMessage(error), 'error');
-  }
+  const lines = [];
+  let failed = false;
+
+  const check = async (name, service, errorMessage, okText, emptyText) => {
+    if (!service.isReady()) return lines.push(emptyText);
+    try {
+      await service.test();
+      lines.push(`✓ ${name}: ${okText}`);
+    } catch (error) {
+      failed = true;
+      lines.push(`✗ ${name}: ${errorMessage(error)}`);
+    }
+  };
+  await check('TMDB', Tmdb, tmdbErrorMessage, 'çalışıyor, afişler ve bilgiler gelecek.', 'TMDB anahtarı yok. Elle ekleme çalışmaya devam eder.');
+  await check('OMDb', Omdb, omdbErrorMessage, 'çalışıyor, detayda IMDb puanı görünecek.', 'OMDb anahtarı yok (IMDb puanı görünmez).');
+  setSettingsStatus(lines.join('\n'), failed ? 'error' : 'ok');
 });
 
 document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());

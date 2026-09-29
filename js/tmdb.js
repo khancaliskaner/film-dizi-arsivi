@@ -156,6 +156,12 @@ const Tmdb = {
     };
   },
 
+  // Yapımın IMDb numarası ("tt0816692"); yoksa boş metin
+  async imdbId(kind, id) {
+    const data = await this.request(`/${kind}/${id}/external_ids`);
+    return /^tt\d+$/.test(data.imdb_id || '') ? data.imdb_id : '';
+  },
+
   // Oyuncular (ilk 12, başrolden başlayarak) ve filmlerde yönetmen. Dizilerde tüm sezonların oyuncuları gelir.
   async credits(kind, id) {
     const data = await this.request(`/${kind}/${id}/${kind === 'tv' ? 'aggregate_credits' : 'credits'}`);

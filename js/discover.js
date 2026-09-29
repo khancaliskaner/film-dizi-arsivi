@@ -23,6 +23,7 @@ const Discover = (() => {
   const reviewsEl = document.getElementById('detail-reviews');
   const watchEl = document.getElementById('detail-watch');
   const castEl = document.getElementById('detail-cast');
+  const imdbEl = document.getElementById('detail-imdb');
 
   // Fotoğrafı yüklenemeyen oyuncuda baş harfli renkli daire görünür
   castEl.addEventListener('error', event => {
@@ -298,6 +299,7 @@ const Discover = (() => {
     if (item.poster) posterEl.src = Tmdb.posterUrl(item.poster, 'w342');
     drawActions();
     document.getElementById('detail-director').textContent = '';
+    imdbEl.textContent = '';
     castEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     watchEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     reviewsEl.innerHTML = '<p class="hint">Yorumlar yükleniyor…</p>';
@@ -305,9 +307,39 @@ const Discover = (() => {
     detailDialog.scrollTop = 0;
     // Dördü birbirini beklemeden çalışır; biri başarısız olsa da diğerleri gösterilir
     loadDetails(item, token);
+    loadImdb(item, token);
     loadCast(item, token);
     loadWatch(item, token);
     loadReviews(item, token);
+  }
+
+  // IMDb puanı: önce TMDB'den IMDb numarası, sonra OMDb'den puan. Anahtar yoksa sadece IMDb bağlantısı gösterilir.
+  async function loadImdb(item, token) {
+    let imdbId = '';
+    try {
+      imdbId = await Tmdb.imdbId(item.tmdbType, item.tmdbId);
+    } catch {
+      // IMDb numarası gelmezse bu satır boş kalır
+    }
+    if (token !== detailToken || !imdbId) return;
+
+    const url = `https://www.imdb.com/title/${imdbId}/`;
+    const link = text => `<a class="watch-link" href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    if (!Omdb.isReady()) {
+      imdbEl.innerHTML = `${link("IMDb'de aç ↗")} <span class="muted">· puanı görmek için ⚙ Ayarlar'a OMDb anahtarı ekle</span>`;
+      return;
+    }
+
+    try {
+      const imdb = await Omdb.rating(imdbId);
+      if (token !== detailToken) return;
+      imdbEl.innerHTML = imdb
+        ? `${link(`IMDb puanı: <strong>${imdb.rating.toFixed(1)}</strong> / 10`)} <span class="muted">(${new Intl.NumberFormat('tr-TR', { notation: 'compact' }).format(imdb.votes)} oy)</span>`
+        : `${link("IMDb'de aç ↗")} <span class="muted">· IMDb'de henüz puan yok</span>`;
+    } catch (error) {
+      if (token !== detailToken) return;
+      imdbEl.innerHTML = `${link("IMDb'de aç ↗")} <span class="hint error">IMDb puanı alınamadı. ${escapeHtml(omdbErrorMessage(error))}</span>`;
+    }
   }
 
   // Oyuncular ve yönetmen

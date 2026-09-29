@@ -237,6 +237,7 @@
           <p class="detail-director" id="detail-director"></p>
           <p class="preview-genres" id="detail-genres"></p>
           <p class="detail-vote" id="detail-vote"></p>
+          <p class="detail-vote" id="detail-imdb"></p>
         </div>
       </div>
       <p class="detail-overview" id="detail-overview"></p>
@@ -337,6 +338,11 @@
                placeholder="32 karakterlik anahtar (API Key)">
       </label>
       <p class="hint">Anahtar sadece bu tarayıcıda saklanır, GitHub'a gitmez. Afiş ve bilgileri otomatik getirmek için gerekir.</p>
+      <label>OMDb API anahtarı <span class="muted">(isteğe bağlı)</span>
+        <input type="text" id="omdb-key" autocomplete="off" spellcheck="false"
+               placeholder="8 karakterlik anahtar">
+      </label>
+      <p class="hint">IMDb puanını göstermek için gerekir. Ücretsiz anahtarı <a class="watch-link" href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener noreferrer">omdbapi.com/apikey.aspx</a> adresinden e-postana alabilirsin.</p>
       <p class="hint" id="settings-status" hidden></p>
       <div class="form-actions">
         <button type="button" class="btn" id="settings-close">Kapat</button>
@@ -375,6 +381,7 @@
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/tmdb.js"></script>
+  <script src="js/omdb.js"></script>
   <script src="js/discover.js"></script>
   <script src="js/diary.js"></script>
   <script src="js/stats.js"></script>
