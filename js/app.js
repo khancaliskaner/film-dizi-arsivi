@@ -43,9 +43,22 @@ const PAGES = {
     empty: 'İzleme listen boş.',
     filter: item => item.status === 'izlenecek',
     toolbar: true,
-    hide: ['status', 'rating']
+    hide: ['status', 'rating', 'liked']
+  },
+  listelerim: {
+    title: 'Listelerim',
+    subtitle: 'Kendi özel listelerin',
+    view: Lists // içeriği js/lists.js çizer
+  },
+  profil: {
+    title: 'Profil',
+    subtitle: 'Favorilerin ve özetin',
+    view: Profile // içeriği js/profile.js çizer
   }
 };
+
+// Sayfa kendi içeriğini çizen bölümler (Keşfet, Günlük, İstatistik, Listelerim, Profil)
+const VIEWS = [Discover, Diary, Stats, Lists, Profile];
 
 // İzleme tarihine göre yeniden eskiye; tarih yoksa eklenme zamanına bakar.
 function byWatchedDateDesc(a, b) {
@@ -61,8 +74,9 @@ const SORTS = {
   title: (a, b) => a.title.localeCompare(b.title, 'tr')
 };
 
+// Adres "#listelerim/abc123" gibi olabilir; "/" öncesi sayfa adıdır, sonrası sayfanın kendi işidir.
 function currentPage() {
-  const name = location.hash.slice(1);
+  const name = location.hash.slice(1).split('/')[0];
   return PAGES[name] ? name : 'ana';
 }
 
@@ -107,9 +121,10 @@ const controls = {
   status: document.getElementById('filter-status'),
   rating: document.getElementById('filter-rating'),
   year: document.getElementById('filter-year'),
+  liked: document.getElementById('filter-liked'),
   sort: document.getElementById('sort')
 };
-const DEFAULT_FILTERS = { search: '', type: '', status: '', rating: '', year: '', sort: 'date' };
+const DEFAULT_FILTERS = { search: '', type: '', status: '', rating: '', year: '', liked: '', sort: 'date' };
 let filters = { ...DEFAULT_FILTERS };
 
 function applyFilters(items) {
@@ -119,6 +134,7 @@ function applyFilters(items) {
     if (filters.type && item.type !== filters.type) return false;
     if (filters.status && item.status !== filters.status) return false;
     if (filters.year && String(item.year) !== filters.year) return false;
+    if (filters.liked && !item.liked) return false;
     if (filters.rating === 'none' && item.rating) return false;
     if (filters.rating && filters.rating !== 'none' && !(item.rating >= Number(filters.rating))) return false;
     return true;
@@ -144,6 +160,7 @@ function setupToolbar(page) {
   const hide = page.hide || [];
   controls.status.hidden = hide.includes('status');
   controls.rating.hidden = hide.includes('rating');
+  controls.liked.hidden = hide.includes('liked');
   controls.sort.querySelector('[value="rating"]').hidden = hide.includes('rating');
   controls.sort.querySelector('[value="date"]').textContent =
     page === PAGES.liste ? 'En yeni eklenen' : 'En yeni izlenen';
@@ -187,8 +204,8 @@ function render() {
     link.classList.toggle('active', link.dataset.page === pageName);
   });
 
-  // Keşfet, Günlük ve İstatistik kendi içeriğini çizer; arşiv listesi ve araç çubuğu gizlenir
-  for (const view of [Discover, Diary, Stats]) {
+  // Kendi içeriğini çizen sayfalarda arşiv listesi ve araç çubuğu gizlenir
+  for (const view of VIEWS) {
     if (view !== page.view) view.hide();
   }
   if (page.view) {
@@ -220,13 +237,15 @@ function render() {
   document.getElementById('page-subtitle').textContent =
     !total ? '' : filtered ? `${total} kayıttan ${items.length} tanesi gösteriliyor` : `${total} kayıt`;
 
-  grid.innerHTML = items.map(cardHtml).join('');
+  grid.innerHTML = items.map(item => cardHtml(item)).join('');
   emptyText.textContent = total ? 'Aramana veya filtrelerine uyan kayıt yok.' : page.empty;
   emptyText.hidden = items.length > 0;
 }
 
-function cardHtml(item) {
+// options.listId verilirse (özel liste sayfası) "Sil" yerine "Listeden çıkar" düğmesi çıkar.
+function cardHtml(item, options = {}) {
   const hue = titleHue(item.title);
+  const watched = item.status === 'izledim';
   const genre = item.genres?.[0];
   const meta = [item.year, item.type === 'dizi' ? 'Dizi' : 'Film', genre].filter(Boolean).join(' · ');
   const date = item.status === 'izledim' && item.watchedDate ? formatDate(item.watchedDate) : '';
@@ -242,6 +261,10 @@ function cardHtml(item) {
         <span class="poster-title">${escapeHtml(item.title)}</span>
         ${poster}
         <span class="badge">${item.type === 'dizi' ? 'Dizi' : 'Film'}</span>
+        <div class="card-fabs">
+          ${watched ? `<button class="fab ${item.liked ? 'on' : ''}" data-action="like" data-id="${item.id}" aria-pressed="${Boolean(item.liked)}" aria-label="Beğen" title="Beğen">${item.liked ? '♥' : '♡'}</button>` : ''}
+          <button class="fab" data-action="lists" data-id="${item.id}" aria-label="Listelere ekle" title="Listelere ekle">+</button>
+        </div>
       </div>
       <div class="card-body">
         <h3 class="card-title">${escapeHtml(item.title)}</h3>
@@ -252,32 +275,51 @@ function cardHtml(item) {
       </div>
       <div class="card-actions">
         <button class="btn btn-small" data-action="edit" data-id="${item.id}">Düzenle</button>
-        <button class="btn btn-small btn-danger" data-action="delete" data-id="${item.id}">Sil</button>
+        ${options.listId
+          ? `<button class="btn btn-small" data-action="unlist" data-id="${item.id}" data-list="${options.listId}">Listeden çıkar</button>`
+          : `<button class="btn btn-small btn-danger" data-action="delete" data-id="${item.id}">Sil</button>`}
       </div>
     </article>`;
 }
 
 // İnternet yoksa afiş yüklenemez: resmi kaldır, altındaki renkli yer tutucu görünsün
-grid.addEventListener('error', event => {
+function removeBrokenPoster(event) {
   if (event.target.classList.contains('poster-img')) event.target.remove();
-}, true);
+}
+grid.addEventListener('error', removeBrokenPoster, true);
 
-// Kartlardaki Düzenle / Sil butonları (tek bir dinleyiciyle hepsini yakalıyoruz)
-grid.addEventListener('click', event => {
+// Kartlardaki butonlar (Düzenle, Sil, Beğen, Listelere ekle, Listeden çıkar).
+// Tek bir dinleyiciyle hepsini yakalıyoruz; özel liste sayfasındaki kartlar da bunu kullanır.
+function handleCardClick(event) {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
   const item = Storage.getById(button.dataset.id);
   if (!item) return;
 
-  if (button.dataset.action === 'edit') {
-    openForm(item);
-  } else if (button.dataset.action === 'delete') {
-    if (confirm(`"${item.title}" silinsin mi? Bu işlem geri alınamaz.`)) {
-      Storage.remove(item.id);
+  switch (button.dataset.action) {
+    case 'edit':
+      openForm(item);
+      break;
+    case 'delete':
+      if (confirm(`"${item.title}" silinsin mi? Bu işlem geri alınamaz.`)) {
+        Storage.remove(item.id);
+        render();
+      }
+      break;
+    case 'like':
+      Storage.update(item.id, { liked: !item.liked });
       render();
-    }
+      break;
+    case 'lists':
+      Lists.openPicker(item.id);
+      break;
+    case 'unlist':
+      Storage.toggleInList(button.dataset.list, item.id);
+      render();
+      break;
   }
-});
+}
+grid.addEventListener('click', handleCardClick);
 
 // ---------- Yıldız puanlama ----------
 // Yıldızların neresine basıldığına bakıp 0.5'lik adımlarla puan hesaplar.
@@ -493,6 +535,7 @@ function openForm(item = null) {
     fields.status.value = item.status;
     fields.watchedDate.value = item.watchedDate || '';
     fields.review.value = item.review || '';
+    fields.liked.checked = Boolean(item.liked);
     setRating(item.rating || 0);
   } else {
     // İzleme listesi sayfasındayken eklenen şey büyük ihtimalle "izlemek istiyorum"dur
@@ -531,6 +574,7 @@ form.addEventListener('submit', event => {
     rating: watched ? currentRating : 0,
     watchedDate: watched ? fields.watchedDate.value : '',
     review: fields.review.value.trim(),
+    liked: watched && fields.liked.checked,
     // TMDB bilgileri (elle eklenen kayıtlarda boş)
     ...(tmdbData || { tmdbId: null, tmdbType: '', poster: '', overview: '', genres: [] })
   };

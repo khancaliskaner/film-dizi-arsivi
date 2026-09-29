@@ -59,14 +59,17 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   gap: 4px;
   flex: 1;
+  min-width: 0;
+  overflow-x: auto; /* menü sığmazsa yana kaydırılır */
+  scrollbar-width: none;
 }
 
 .nav a {
-  padding: 8px 12px;
+  padding: 8px 9px;
   border-radius: var(--radius);
   color: var(--muted);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   white-space: nowrap;
 }
 
@@ -276,6 +279,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 .dialog-form input[type="text"],
 .dialog-form input[type="number"],
 .dialog-form input[type="date"],
+.dialog-form input[type="search"],
 .dialog-form textarea {
   min-height: 44px;
   padding: 10px 12px;
@@ -832,6 +836,210 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-size: 0.7rem;
 }
 
+/* ---------- Kalp ve liste düğmeleri (kartların afişinde) ---------- */
+.card-fabs {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.fab {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.fab:hover { background: rgba(0, 0, 0, 0.85); }
+.fab.on { color: #ff5d73; }
+
+.dialog-form .like-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.like-toggle input { width: 20px; height: 20px; accent-color: #ff5d73; }
+.like-toggle:has(input:checked) { border-color: #ff5d73; background: rgba(255, 93, 115, 0.12); }
+
+/* ---------- Listelerim ---------- */
+.list-create {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.list-create input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.list-create input:focus,
+.dialog-form input[type="search"]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.list-index {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.list-card:hover { border-color: var(--muted); }
+.list-card-name { overflow-wrap: anywhere; }
+
+.covers {
+  display: flex;
+  height: 110px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.cover {
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(160deg, hsl(var(--hue), 35%, 30%), hsl(calc(var(--hue) + 40), 40%, 12%));
+}
+
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover-empty { --hue: 210; }
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.back-link:hover { color: var(--text); }
+
+.list-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.list-head h2 { margin: 0; font-size: 1.4rem; overflow-wrap: anywhere; }
+.list-head p { margin: 2px 0 0; }
+.list-head-actions { display: flex; gap: 8px; }
+
+/* "Listelere ekle" penceresi */
+#lists-picker { max-height: 240px; overflow-y: auto; }
+
+.dialog-form .pick-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pick-row:hover { background: var(--surface-2); }
+.pick-row span:first-of-type { flex: 1; overflow-wrap: anywhere; }
+.pick-row input { width: 22px; height: 22px; accent-color: var(--accent); }
+.dialog-form > .muted { margin: -8px 0 0; overflow-wrap: anywhere; }
+
+/* ---------- Profil ---------- */
+.section-title {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.1rem;
+}
+
+.favorites {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  max-width: 760px;
+  margin-bottom: 28px;
+}
+
+.fav-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fav-slot .poster,
+.mini-poster .poster {
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fav-slot:hover .poster { border-color: var(--muted); }
+.fav-slot:focus-visible,
+.mini-poster:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fav-empty .poster { border: 2px dashed var(--border); background: var(--surface); }
+.fav-plus { font-size: 2.2rem; color: var(--muted); }
+.fav-title { font-size: 0.8rem; font-weight: 600; overflow-wrap: anywhere; }
+
+.mini-posters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.mini-poster { padding: 0; border: 0; background: none; border-radius: var(--radius); cursor: pointer; }
+.mini-poster:hover .poster { border-color: var(--muted); }
+.mini-poster .poster-letter { font-size: 2rem; }
+
+.fav-list { margin: 0; max-height: 320px; }
+.pick-empty { padding: 12px; }
+
 /* ---------- Telefon ---------- */
 @media (max-width: 640px) {
   .header-inner { flex-wrap: wrap; gap: 8px; }
@@ -850,6 +1058,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   .bars { gap: 3px; }
   .bar-label { font-size: 0.6rem; }
   .diary-review { display: none; }
+  .favorites { gap: 8px; }
+  .fav-title { font-size: 0.7rem; }
+  .list-index { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .list-create .btn { padding: 0 12px; }
   .grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;

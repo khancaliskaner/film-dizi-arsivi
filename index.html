@@ -19,6 +19,8 @@
         <a href="#liste" data-page="liste">İzleme Listem</a>
         <a href="#gunluk" data-page="gunluk">Günlük</a>
         <a href="#istatistik" data-page="istatistik">İstatistik</a>
+        <a href="#listelerim" data-page="listelerim">Listelerim</a>
+        <a href="#profil" data-page="profil">Profil</a>
       </nav>
       <div class="header-actions">
         <button class="btn btn-icon" id="settings-btn" aria-label="Ayarlar" title="Ayarlar">⚙</button>
@@ -56,6 +58,10 @@
         </select>
         <select id="filter-year" aria-label="Yıl">
           <option value="">Tüm yıllar</option>
+        </select>
+        <select id="filter-liked" aria-label="Beğenilenler">
+          <option value="">Beğenilenler ve diğerleri</option>
+          <option value="1">♥ Sadece beğenilenler</option>
         </select>
         <select id="sort" aria-label="Sıralama">
           <option value="date">En yeni izlenen</option>
@@ -109,7 +115,70 @@
         <div class="bars" id="rating-chart"></div>
       </div>
     </section>
+
+    <!-- Listelerim sayfası: içeriği js/lists.js çizer -->
+    <section id="lists" hidden>
+      <form class="list-create" id="list-create">
+        <input type="text" id="list-name" maxlength="60" placeholder="Yeni liste adı (ör. Hafta sonu filmleri)" aria-label="Yeni liste adı" autocomplete="off">
+        <button type="submit" class="btn btn-primary">Liste oluştur</button>
+      </form>
+      <div class="list-index" id="lists-index"></div>
+
+      <div id="list-detail" hidden>
+        <a class="back-link" href="#listelerim">← Tüm listeler</a>
+        <div class="list-head">
+          <div>
+            <h2 id="list-title"></h2>
+            <p class="muted" id="list-count"></p>
+          </div>
+          <div class="list-head-actions">
+            <button type="button" class="btn btn-small" id="list-rename">Adı değiştir</button>
+            <button type="button" class="btn btn-small btn-danger" id="list-delete">Listeyi sil</button>
+          </div>
+        </div>
+        <div class="grid" id="list-grid"></div>
+        <p class="empty" id="list-empty" hidden>Bu liste boş. Arşivdeki kartların üzerindeki "+" düğmesiyle buraya ekleyebilirsin.</p>
+      </div>
+    </section>
+
+    <!-- Profil sayfası: içeriği js/profile.js çizer -->
+    <section id="profile" hidden>
+      <h2 class="section-title">Favori 4</h2>
+      <div class="favorites" id="favorites"></div>
+      <div class="stat-tiles" id="profile-summary"></div>
+      <h2 class="section-title">Beğendiklerim</h2>
+      <div class="mini-posters" id="profile-liked"></div>
+    </section>
   </main>
+
+  <!-- Kartlardaki "+" düğmesi: yapımı listelere ekle / çıkar -->
+  <dialog id="lists-dialog">
+    <div class="dialog-form">
+      <h2>Listelere ekle</h2>
+      <p class="muted" id="lists-picker-title"></p>
+      <div id="lists-picker"></div>
+      <form class="list-create" id="lists-picker-form">
+        <input type="text" id="lists-picker-name" maxlength="60" placeholder="Yeni liste oluştur…" aria-label="Yeni liste adı" autocomplete="off">
+        <button type="submit" class="btn">Oluştur</button>
+      </form>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary" id="lists-close">Tamam</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Profil: favori kutusuna yapım seç -->
+  <dialog id="fav-dialog">
+    <div class="dialog-form">
+      <h2>Favori seç</h2>
+      <input type="search" id="fav-search" placeholder="İzlediklerin arasında ara…" aria-label="İzlediklerin arasında ara" autocomplete="off">
+      <ul class="tmdb-results fav-list" id="fav-list"></ul>
+      <div class="form-actions">
+        <button type="button" class="btn btn-danger" id="fav-remove" hidden>Kutudan kaldır</button>
+        <button type="button" class="btn" id="fav-close">Vazgeç</button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- Keşfet: yapım detayı ve dünyadan yorumlar -->
   <dialog id="detail-dialog">
@@ -188,6 +257,8 @@
           </div>
         </div>
 
+        <label class="like-toggle"><input type="checkbox" name="liked"> <span>♥ Beğendim</span></label>
+
         <label>İzleme tarihi
           <input type="date" name="watchedDate">
         </label>
@@ -230,6 +301,8 @@
   <script src="js/discover.js"></script>
   <script src="js/diary.js"></script>
   <script src="js/stats.js"></script>
+  <script src="js/lists.js"></script>
+  <script src="js/profile.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
