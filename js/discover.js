@@ -24,6 +24,29 @@ const Discover = (() => {
   const watchEl = document.getElementById('detail-watch');
   const castEl = document.getElementById('detail-cast');
   const imdbEl = document.getElementById('detail-imdb');
+  const trailerEl = document.getElementById('detail-trailer');
+  let trailer = null; // açık yapımın fragmanı: { key, name }
+
+  // Fragman düğmesine basılınca pencerenin içinde oynatıcıyı aç (YouTube'un çerezsiz sürümü)
+  trailerEl.addEventListener('click', event => {
+    if (!event.target.closest('.trailer-btn') || !trailer) return;
+    trailerEl.innerHTML = `
+      <div class="trailer-frame">
+        <iframe src="https://www.youtube-nocookie.com/embed/${trailer.key}?autoplay=1&rel=0"
+                title="${escapeHtml(trailer.name)}" loading="lazy" allowfullscreen
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+      <a class="watch-link" href="https://www.youtube.com/watch?v=${trailer.key}" target="_blank" rel="noopener noreferrer">YouTube'da aç ↗</a>`;
+  });
+
+  // Pencere kapanınca oynatıcı da kapansın (ses arkada çalmaya devam etmesin).
+  // Kapatan her yer closeDetail'i çağırır; Esc tuşuyla kapanırsa "close" olayı temizler.
+  function closeDetail() {
+    trailerEl.innerHTML = '';
+    detailDialog.close();
+  }
+  detailDialog.addEventListener('close', () => { trailerEl.innerHTML = ''; });
 
   // Fotoğrafı yüklenemeyen oyuncuda baş harfli renkli daire görünür
   castEl.addEventListener('error', event => {
@@ -312,6 +335,8 @@ const Discover = (() => {
     drawActions();
     document.getElementById('detail-director').textContent = '';
     imdbEl.textContent = '';
+    trailerEl.innerHTML = '';
+    trailer = null;
     castEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     watchEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     reviewsEl.innerHTML = '<p class="hint">Yorumlar yükleniyor…</p>';
@@ -319,10 +344,23 @@ const Discover = (() => {
     detailDialog.scrollTop = 0;
     // Dördü birbirini beklemeden çalışır; biri başarısız olsa da diğerleri gösterilir
     loadDetails(item, token);
+    loadTrailer(item, token);
     loadImdb(item, token);
     loadCast(item, token);
     loadWatch(item, token);
     loadReviews(item, token);
+  }
+
+  // Fragman bulunursa "Fragmanı izle" düğmesi çıkar; bulunamazsa hiçbir şey gösterilmez
+  async function loadTrailer(item, token) {
+    try {
+      const found = await Tmdb.trailer(item.tmdbType, item.tmdbId);
+      if (token !== detailToken || !found) return;
+      trailer = found;
+      trailerEl.innerHTML = '<button type="button" class="btn trailer-btn">▶ Fragmanı izle</button>';
+    } catch {
+      // fragman gelmezse bu bölüm boş kalır
+    }
   }
 
   // 184203 -> "184.203", 2516752 -> "2,5 milyon"
@@ -483,7 +521,7 @@ const Discover = (() => {
     if (!button) return;
 
     const entry = findOwned(current);
-    detailDialog.close();
+    closeDetail();
     if (button.dataset.act === 'edit' && entry) return openForm(entry);
 
     const watched = button.dataset.act === 'watched';
@@ -503,9 +541,9 @@ const Discover = (() => {
     });
   });
 
-  document.getElementById('detail-close').addEventListener('click', () => detailDialog.close());
+  document.getElementById('detail-close').addEventListener('click', closeDetail);
   detailDialog.addEventListener('click', event => {
-    if (event.target === detailDialog) detailDialog.close();
+    if (event.target === detailDialog) closeDetail();
   });
   document.getElementById('detail-poster').addEventListener('error', event => { event.target.hidden = true; });
 

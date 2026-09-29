@@ -156,6 +156,17 @@ const Tmdb = {
     };
   },
 
+  // En uygun YouTube fragmanı: { key, name } ya da yoksa null.
+  // Sıralama: Fragman > Teaser; Türkçe ve resmi olanlar biraz daha önde.
+  async trailer(kind, id) {
+    const data = await this.request(`/${kind}/${id}/videos`, { include_video_language: 'tr,en' });
+    const score = video => ({ Trailer: 4, Teaser: 2 }[video.type] || 0) + (video.iso_639_1 === 'tr' ? 1.5 : 0) + (video.official ? 0.5 : 0);
+    const best = (data.results || [])
+      .filter(video => video.site === 'YouTube' && /^[\w-]{11}$/.test(video.key) && score(video) >= 2)
+      .sort((a, b) => score(b) - score(a))[0];
+    return best ? { key: best.key, name: best.name || 'Fragman' } : null;
+  },
+
   // Yapımın IMDb numarası ("tt0816692"); yoksa boş metin
   async imdbId(kind, id) {
     const data = await this.request(`/${kind}/${id}/external_ids`);
