@@ -156,6 +156,12 @@ const Tmdb = {
     };
   },
 
+  // TMDB'nin "bunu sevenler şunları da sevdi" önerileri (aynı türden: film ya da dizi)
+  async recommendations(kind, id) {
+    const data = await this.request(`/${kind}/${id}/recommendations`);
+    return (data.results || []).map(result => this.mapResult(result, kind));
+  },
+
   // En uygun YouTube fragmanı: { key, name } ya da yoksa null.
   // Sıralama: Fragman > Teaser; Türkçe ve resmi olanlar biraz daha önde.
   async trailer(kind, id) {

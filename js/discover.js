@@ -25,6 +25,8 @@ const Discover = (() => {
   const castEl = document.getElementById('detail-cast');
   const imdbEl = document.getElementById('detail-imdb');
   const trailerEl = document.getElementById('detail-trailer');
+  const similarEl = document.getElementById('detail-similar');
+  let similarItems = []; // açık yapımın benzerleri
   let trailer = null; // açık yapımın fragmanı: { key, name }
 
   // Fragman düğmesine basılınca pencerenin içinde oynatıcıyı aç (YouTube'un çerezsiz sürümü)
@@ -62,6 +64,7 @@ const Discover = (() => {
   const MIN_VISIBLE = 12; // "arşivimde olmayanlar" seçiliyken ekranda en az bu kadar kart olsun diye otomatik sayfa eklenir
   const MAX_TOP_UPS = 5;
   let topUps = 0;
+  let emptyNote = ''; // liste boş kalırsa gösterilecek özel açıklama (ör. "Sana özel" için)
   const optionsCache = {}; // kind -> { genres, providers }
   let loadToken = 0;   // eski bir isteğin cevabı geç gelirse yok saymak için
   let detailToken = 0;
@@ -84,15 +87,17 @@ const Discover = (() => {
 
     try {
       const next = state.page + 1;
-      const data = state.query
-        ? await Tmdb.searchKind(state.kind, state.query, next)
-        : await Tmdb.discover(state.kind, { ...state.filters, sort: state.sort }, next);
+      let data;
+      emptyNote = '';
+      if (state.query) data = await Tmdb.searchKind(state.kind, state.query, next);
+      else if (state.sort === 'foryou') data = await forYou();
+      else data = await Tmdb.discover(state.kind, { ...state.filters, sort: state.sort }, next);
       if (token !== loadToken) return;
       const known = new Set(state.items.map(item => item.tmdbId));
       state.items.push(...data.results.filter(item => !known.has(item.tmdbId)));
       state.page = data.page;
       state.totalPages = data.totalPages;
-      statusEl.textContent = state.items.length ? '' : (hasFilters() ? 'Bu filtrelere uyan sonuç bulunamadı.' : 'Sonuç bulunamadı.');
+      statusEl.textContent = state.items.length ? '' : (emptyNote || (hasFilters() ? 'Bu filtrelere uyan sonuç bulunamadı.' : 'Sonuç bulunamadı.'));
     } catch (error) {
       if (token !== loadToken) return;
       statusEl.textContent = tmdbErrorMessage(error);
@@ -104,6 +109,49 @@ const Discover = (() => {
       topUps++;
       load(false);
     }
+  }
+
+  // "Sana özel": son zamanlarda 4+ puan verdiğin veya beğendiğin (TMDB'den eklenmiş) yapımlara benzeyenler.
+  // Birden fazla yapıma benzeyen öne çıkar; arşivinde zaten olanlar ve afişsizler çıkarılır. Tek sayfa döner.
+  async function forYou() {
+    const one = { page: 1, totalPages: 1 };
+    const seeds = Storage.getAll()
+      .filter(entry => entry.tmdbId && entry.tmdbType === state.kind && entry.status === 'izledim' && (entry.rating >= 4 || entry.liked))
+      .sort((a, b) => (b.watchedDate || b.createdAt).localeCompare(a.watchedDate || a.createdAt))
+      .slice(0, 6);
+    if (!seeds.length) {
+      emptyNote = `Öneri için birkaç ${state.kind === 'tv' ? 'diziye' : 'filme'} 4 yıldız ve üstü puan ver veya ♥ ile beğen (TMDB ile eklenmiş olmaları gerekir).`;
+      return { ...one, results: [] };
+    }
+
+    const settled = await Promise.allSettled(seeds.map(seed => Tmdb.recommendations(state.kind, seed.tmdbId)));
+    if (settled.every(result => result.status === 'rejected')) throw settled[0].reason;
+
+    const owned = ownedMap();
+    const scored = new Map();
+    settled.forEach((result, index) => {
+      if (result.status !== 'fulfilled') return;
+      const weight = (seeds[index].rating >= 4.5 ? 1.5 : 1) + (seeds[index].liked ? 0.5 : 0);
+      for (const item of result.value) {
+        if (!item.poster || owned.has(item.tmdbType + ':' + item.tmdbId)) continue;
+        const entry = scored.get(item.tmdbId) || { item, score: 0, because: [] };
+        entry.score += weight;
+        entry.because.push(seeds[index].title);
+        scored.set(item.tmdbId, entry);
+      }
+    });
+
+    const results = [...scored.values()]
+      .sort((a, b) => b.score - a.score || b.item.voteAverage - a.item.voteAverage)
+      .slice(0, 40)
+      .map(({ item, because }) => ({
+        ...item,
+        because: because.length === 1
+          ? `Şuna benzer: ${because[0]}`
+          : `Şunlara benzer: ${because.slice(0, 2).join(', ')}${because.length > 2 ? ` +${because.length - 2}` : ''}`
+      }));
+    if (!results.length) emptyNote = 'Şimdilik yeni bir öneri çıkmadı. Biraz daha yapıma puan verince öneriler çoğalır.';
+    return { ...one, results };
   }
 
   // Kullanıcının bir şey seçmesiyle başlayan yüklemeler (otomatik sayfa ekleme sayacı sıfırlanır)
@@ -161,8 +209,9 @@ const Discover = (() => {
     for (const button of kindBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.kind === state.kind);
     for (const button of sortBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.sort === state.sort);
     // Arama yaparken sıralama ve filtreler işe yaramaz (TMDB aramada bunları desteklemiyor)
+    // "Sana özel" de kendi önerisini kendisi seçtiği için filtre almaz
     sortBar.hidden = Boolean(state.query);
-    filtersEl.hidden = Boolean(state.query);
+    filtersEl.hidden = Boolean(state.query) || state.sort === 'foryou';
     clearBtn.hidden = !hasFilters();
   }
 
@@ -184,6 +233,7 @@ const Discover = (() => {
           <h3 class="card-title">${escapeHtml(item.title)}</h3>
           <p class="card-meta">${escapeHtml([item.year, label].filter(Boolean).join(' · '))}</p>
           ${item.voteAverage ? `<p class="card-tmdb">TMDB ${item.voteAverage.toFixed(1)}</p>` : ''}
+          ${item.because ? `<p class="card-because">${escapeHtml(item.because)}</p>` : ''}
         </div>
       </article>`;
   }
@@ -337,6 +387,8 @@ const Discover = (() => {
     imdbEl.textContent = '';
     trailerEl.innerHTML = '';
     trailer = null;
+    similarItems = [];
+    similarEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     castEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     watchEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     reviewsEl.innerHTML = '<p class="hint">Yorumlar yükleniyor…</p>';
@@ -345,11 +397,48 @@ const Discover = (() => {
     // Dördü birbirini beklemeden çalışır; biri başarısız olsa da diğerleri gösterilir
     loadDetails(item, token);
     loadTrailer(item, token);
+    loadSimilar(item, token);
     loadImdb(item, token);
     loadCast(item, token);
     loadWatch(item, token);
     loadReviews(item, token);
   }
+
+  // Benzer yapımlar şeridi: TMDB önerilerinden afişi olan ilk 12'si; birine basınca onun detayı açılır
+  async function loadSimilar(item, token) {
+    try {
+      const list = (await Tmdb.recommendations(item.tmdbType, item.tmdbId)).filter(other => other.poster).slice(0, 12);
+      if (token !== detailToken) return;
+      similarItems = list;
+      const owned = ownedMap();
+      similarEl.innerHTML = list.length
+        ? `<ul class="similar-list">${list.map((other, index) => `
+            <li>
+              <button type="button" class="similar-item" data-index="${index}" aria-label="${escapeHtml(other.title)} ayrıntıları">
+                <span class="poster" style="--hue:${titleHue(other.title)}">
+                  <span class="poster-letter">${escapeHtml(other.title.charAt(0).toUpperCase())}</span>
+                  <img class="poster-img" src="${Tmdb.posterUrl(other.poster, 'w185')}" alt="" loading="lazy">
+                  ${owned.has(other.tmdbType + ':' + other.tmdbId) ? '<span class="owned-badge" title="Arşivinde var">✓</span>' : ''}
+                </span>
+                <strong class="similar-title">${escapeHtml(other.title)}</strong>
+                <span class="similar-meta muted">${[other.year, other.voteAverage ? '★ ' + other.voteAverage.toFixed(1) : ''].filter(Boolean).join(' · ')}</span>
+              </button>
+            </li>`).join('')}</ul>`
+        : '<p class="hint">Benzer yapım bulunamadı.</p>';
+    } catch (error) {
+      if (token !== detailToken) return;
+      similarEl.innerHTML = `<p class="hint error">Benzer yapımlar getirilemedi. ${escapeHtml(tmdbErrorMessage(error))}</p>`;
+    }
+  }
+
+  similarEl.addEventListener('click', event => {
+    const button = event.target.closest('.similar-item');
+    if (button && similarItems[button.dataset.index]) openDetail(similarItems[button.dataset.index]);
+  });
+
+  similarEl.addEventListener('error', event => {
+    if (event.target.classList.contains('poster-img')) event.target.remove();
+  }, true);
 
   // Fragman bulunursa "Fragmanı izle" düğmesi çıkar; bulunamazsa hiçbir şey gösterilmez
   async function loadTrailer(item, token) {
