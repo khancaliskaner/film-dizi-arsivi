@@ -42,7 +42,8 @@ const Tmdb = {
       year: Number((result.release_date || result.first_air_date || '').slice(0, 4)) || null,
       poster: result.poster_path || '',
       overview: result.overview || '',
-      voteAverage: result.vote_average || 0
+      voteAverage: result.vote_average || 0,
+      originalLanguage: result.original_language || ''
     };
   },
 
@@ -55,10 +56,61 @@ const Tmdb = {
       .map(result => this.mapResult(result, result.media_type));
   },
 
-  // Keşfet sayfası için liste: kind = 'movie' | 'tv', category = 'popular' | 'top_rated'. Sayfa sayfa gelir.
-  async list(kind, category, page) {
-    const data = await this.request(`/${kind}/${category}`, { page });
-    return this.toPage(data, kind);
+  // Keşfet sayfasının filtreli listesi. kind = 'movie' | 'tv'. Sayfa sayfa gelir.
+  // filters: { sort: 'popular' | 'top' | 'newest', genre, year, minRating, language, provider } (boş olanlar yok sayılır)
+  //   year: "2019" (tek yıl) ya da "d2010" (2010'lar); provider: Türkiye'deki platformun TMDB numarası.
+  async discover(kind, filters, page) {
+    const dateField = kind === 'movie' ? 'primary_release_date' : 'first_air_date';
+    const params = {
+      page,
+      include_adult: 'false',
+      sort_by: { popular: 'popularity.desc', top: 'vote_average.desc', newest: dateField + '.desc' }[filters.sort]
+    };
+    if (filters.genre) params.with_genres = filters.genre;
+    if (filters.language) params.with_original_language = filters.language;
+    if (filters.minRating) params['vote_average.gte'] = filters.minRating;
+    if (filters.provider) {
+      params.with_watch_providers = filters.provider;
+      params.watch_region = 'TR';
+    }
+
+    let from = '';
+    let to = '';
+    if (/^\d{4}$/.test(filters.year)) {
+      from = filters.year + '-01-01';
+      to = filters.year + '-12-31';
+    } else if (/^d\d{4}$/.test(filters.year)) {
+      from = filters.year.slice(1) + '-01-01';
+      to = Number(filters.year.slice(1)) + 9 + '-12-31';
+    }
+    // "En yeni" sıralamasında henüz çıkmamış yapımlar görünmesin
+    const today = new Date().toISOString().slice(0, 10);
+    if (filters.sort === 'newest' && (!to || to > today)) to = today;
+    if (from) params[dateField + '.gte'] = from;
+    if (to) params[dateField + '.lte'] = to;
+
+    // "En beğenilen" 3 oyla 10 alan tanınmamış yapımlarla dolmasın diye en az oy sayısı şart koşulur
+    const narrowed = filters.genre || filters.language || filters.provider || filters.year;
+    const minVotes = filters.sort === 'top' ? (narrowed ? 100 : 300) : filters.sort === 'newest' ? 5 : (filters.minRating ? 50 : 0);
+    if (minVotes) params['vote_count.gte'] = minVotes;
+
+    return this.toPage(await this.request(`/discover/${kind}`, params), kind);
+  },
+
+  // Filtre kutuları için tür listesi (Türkçe adlarıyla)
+  async genres(kind) {
+    const data = await this.request(`/genre/${kind}/list`);
+    return data.genres.map(genre => ({ id: String(genre.id), name: genre.name }));
+  },
+
+  // Filtre kutusu için Türkiye'de en çok kullanılan 15 platform (Netflix, Prime Video…)
+  async providers(kind) {
+    const data = await this.request(`/watch/providers/${kind}`, { watch_region: 'TR' });
+    const rank = provider => provider.display_priorities?.TR ?? provider.display_priority ?? 999;
+    return data.results
+      .sort((a, b) => rank(a) - rank(b))
+      .slice(0, 15)
+      .map(provider => ({ id: String(provider.provider_id), name: provider.provider_name }));
   },
 
   // Keşfet sayfasındaki arama: sadece seçili türde (film veya dizi) arar.

@@ -80,11 +80,43 @@
           <button type="button" data-kind="movie">Filmler</button>
           <button type="button" data-kind="tv">Diziler</button>
         </div>
-        <div class="segmented" id="disc-list">
-          <button type="button" data-list="popular">En çok izlenen</button>
-          <button type="button" data-list="top_rated">En beğenilen</button>
+        <div class="segmented" id="disc-sort">
+          <button type="button" data-sort="popular">En çok izlenen</button>
+          <button type="button" data-sort="top">En beğenilen</button>
+          <button type="button" data-sort="newest">En yeni</button>
         </div>
         <input type="search" id="disc-search" placeholder="TMDB'de ara…" aria-label="TMDB'de ara" autocomplete="off">
+      </div>
+
+      <!-- Filtreler (arama yazılıyken gizlenir) -->
+      <div class="toolbar disc-filters" id="disc-filters">
+        <div class="filters">
+          <select id="f-genre" aria-label="Tür"><option value="">Tüm türler</option></select>
+          <select id="f-year" aria-label="Yıl veya dönem"></select>
+          <select id="f-rating" aria-label="En az TMDB puanı">
+            <option value="">Tüm puanlar</option>
+            <option value="9">★ 9 ve üstü</option>
+            <option value="8">★ 8 ve üstü</option>
+            <option value="7">★ 7 ve üstü</option>
+            <option value="6">★ 6 ve üstü</option>
+            <option value="5">★ 5 ve üstü</option>
+          </select>
+          <select id="f-language" aria-label="Orijinal dil">
+            <option value="">Tüm diller</option>
+            <option value="tr">Türkçe yapımlar</option>
+            <option value="en">İngilizce</option>
+            <option value="ko">Korece</option>
+            <option value="ja">Japonca</option>
+            <option value="fr">Fransızca</option>
+            <option value="es">İspanyolca</option>
+            <option value="de">Almanca</option>
+            <option value="it">İtalyanca</option>
+            <option value="hi">Hintçe</option>
+          </select>
+          <select id="f-provider" aria-label="Platform (Türkiye)"><option value="">Tüm platformlar</option></select>
+          <label class="check-filter"><input type="checkbox" id="f-hide-owned"> <span>Arşivimde olmayanlar</span></label>
+          <button type="button" class="btn btn-small" id="f-clear" hidden>Filtreleri temizle</button>
+        </div>
       </div>
       <p class="hint" id="disc-status"></p>
       <div class="grid" id="disc-grid"></div>

@@ -1,4 +1,4 @@
-// Keşfet sayfası: TMDB'deki popüler / en beğenilen film ve dizileri listeler, arama yapar, detay ve dünyadan yorumları gösterir.
+// Keşfet sayfası: TMDB'deki film ve dizileri sıralama + filtrelerle listeler, arama yapar, detay ve dünyadan yorumları gösterir.
 
 const Discover = (() => {
   const section = document.getElementById('discover');
@@ -7,14 +7,32 @@ const Discover = (() => {
   const moreBtn = document.getElementById('disc-more');
   const searchEl = document.getElementById('disc-search');
   const kindBar = document.getElementById('disc-kind');
-  const listBar = document.getElementById('disc-list');
+  const sortBar = document.getElementById('disc-sort');
+  const filtersEl = document.getElementById('disc-filters');
+  const clearBtn = document.getElementById('f-clear');
+  const filterBoxes = {
+    genre: document.getElementById('f-genre'),
+    year: document.getElementById('f-year'),
+    minRating: document.getElementById('f-rating'),
+    language: document.getElementById('f-language'),
+    provider: document.getElementById('f-provider')
+  };
+  const hideOwnedBox = document.getElementById('f-hide-owned');
 
   const detailDialog = document.getElementById('detail-dialog');
   const reviewsEl = document.getElementById('detail-reviews');
   const watchEl = document.getElementById('detail-watch');
   const actionsEl = document.getElementById('detail-actions');
 
-  const state = { kind: 'movie', list: 'popular', query: '', page: 0, totalPages: 0, items: [], loading: false, loaded: false };
+  const NO_FILTERS = { genre: '', year: '', minRating: '', language: '', provider: '' };
+  const state = {
+    kind: 'movie', sort: 'popular', filters: { ...NO_FILTERS }, hideOwned: false,
+    query: '', page: 0, totalPages: 0, items: [], loading: false, loaded: false
+  };
+  const MIN_VISIBLE = 12; // "arşivimde olmayanlar" seçiliyken ekranda en az bu kadar kart olsun diye otomatik sayfa eklenir
+  const MAX_TOP_UPS = 5;
+  let topUps = 0;
+  const optionsCache = {}; // kind -> { genres, providers }
   let loadToken = 0;   // eski bir isteğin cevabı geç gelirse yok saymak için
   let detailToken = 0;
   let current = null;        // detay penceresinde açık olan yapım
@@ -38,19 +56,48 @@ const Discover = (() => {
       const next = state.page + 1;
       const data = state.query
         ? await Tmdb.searchKind(state.kind, state.query, next)
-        : await Tmdb.list(state.kind, state.list, next);
+        : await Tmdb.discover(state.kind, { ...state.filters, sort: state.sort }, next);
       if (token !== loadToken) return;
       const known = new Set(state.items.map(item => item.tmdbId));
       state.items.push(...data.results.filter(item => !known.has(item.tmdbId)));
       state.page = data.page;
       state.totalPages = data.totalPages;
-      statusEl.textContent = state.items.length ? '' : 'Sonuç bulunamadı.';
+      statusEl.textContent = state.items.length ? '' : (hasFilters() ? 'Bu filtrelere uyan sonuç bulunamadı.' : 'Sonuç bulunamadı.');
     } catch (error) {
       if (token !== loadToken) return;
       statusEl.textContent = tmdbErrorMessage(error);
+      topUps = MAX_TOP_UPS; // hata varsa otomatik yüklemeyi bırak
     }
     state.loading = false;
     draw();
+    if (needsTopUp()) {
+      topUps++;
+      load(false);
+    }
+  }
+
+  // Kullanıcının bir şey seçmesiyle başlayan yüklemeler (otomatik sayfa ekleme sayacı sıfırlanır)
+  function reload() {
+    topUps = 0;
+    load(true);
+  }
+
+  function visibleItems() {
+    if (!state.hideOwned) return state.items.map((item, index) => ({ item, index }));
+    const owned = ownedMap();
+    return state.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !owned.has(item.tmdbType + ':' + item.tmdbId));
+  }
+
+  // "Arşivimde olmayanlar" seçiliyken çoğu kart gizlenirse ekran boş kalmasın: sıradaki sayfayı da getir
+  function needsTopUp() {
+    return state.hideOwned && !state.loading && state.page < state.totalPages &&
+      topUps < MAX_TOP_UPS && visibleItems().length < MIN_VISIBLE;
+  }
+
+  function hasFilters() {
+    return Object.keys(NO_FILTERS).some(key => state.filters[key] !== '') || state.hideOwned;
   }
 
   // Arşivde hangi yapımlar var? ("film:123" gibi anahtarlarla)
@@ -64,12 +111,17 @@ const Discover = (() => {
 
   function draw() {
     const owned = ownedMap();
-    gridEl.innerHTML = state.items.map((item, index) => cardHtml(item, index, owned.has(item.tmdbType + ':' + item.tmdbId))).join('');
+    gridEl.innerHTML = visibleItems()
+      .map(({ item, index }) => cardHtml(item, index, owned.has(item.tmdbType + ':' + item.tmdbId)))
+      .join('');
     moreBtn.hidden = state.loading || !state.items.length || state.page >= state.totalPages;
 
     for (const button of kindBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.kind === state.kind);
-    for (const button of listBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.list === state.list);
-    listBar.hidden = Boolean(state.query); // arama yaparken liste seçimi anlamsız
+    for (const button of sortBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.sort === state.sort);
+    // Arama yaparken sıralama ve filtreler işe yaramaz (TMDB aramada bunları desteklemiyor)
+    sortBar.hidden = Boolean(state.query);
+    filtersEl.hidden = Boolean(state.query);
+    clearBtn.hidden = !hasFilters();
   }
 
   function cardHtml(item, index, isOwned) {
@@ -95,19 +147,89 @@ const Discover = (() => {
   }
 
   // ---------- Kontroller ----------
+  // Film <-> Dizi: tür ve platform listeleri farklı olabildiği için o iki filtre sıfırlanır
   kindBar.addEventListener('click', event => {
     const button = event.target.closest('button');
     if (!button || button.dataset.kind === state.kind) return;
     state.kind = button.dataset.kind;
-    load(true);
+    state.filters.genre = '';
+    state.filters.provider = '';
+    syncBoxes();
+    loadOptions();
+    reload();
   });
 
-  listBar.addEventListener('click', event => {
+  sortBar.addEventListener('click', event => {
     const button = event.target.closest('button');
-    if (!button || button.dataset.list === state.list) return;
-    state.list = button.dataset.list;
-    load(true);
+    if (!button || button.dataset.sort === state.sort) return;
+    state.sort = button.dataset.sort;
+    reload();
   });
+
+  // Filtre kutularından biri değişince hepsini oku ve listeyi baştan getir
+  filtersEl.addEventListener('change', event => {
+    if (event.target === hideOwnedBox) {
+      state.hideOwned = hideOwnedBox.checked;
+      topUps = 0;
+      draw();
+      if (needsTopUp()) {
+        topUps++;
+        load(false);
+      }
+      return;
+    }
+    for (const key in filterBoxes) state.filters[key] = filterBoxes[key].value;
+    reload();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    state.filters = { ...NO_FILTERS };
+    state.hideOwned = false;
+    syncBoxes();
+    reload();
+  });
+
+  // Kutuların gösterdiği değerleri state ile aynı yap
+  function syncBoxes() {
+    for (const key in filterBoxes) filterBoxes[key].value = state.filters[key];
+    hideOwnedBox.checked = state.hideOwned;
+  }
+
+  // Tür ve platform kutularını TMDB'den gelen listelerle doldurur (bir kez getirilir, sonra hatırlanır)
+  function fillBox(box, list, allLabel) {
+    box.innerHTML = `<option value="">${allLabel}</option>` +
+      list.map(entry => `<option value="${entry.id}">${escapeHtml(entry.name)}</option>`).join('');
+    box.value = state.filters[box === filterBoxes.genre ? 'genre' : 'provider'];
+  }
+
+  async function loadOptions() {
+    if (!Tmdb.isReady()) return;
+    const kind = state.kind;
+    try {
+      if (!optionsCache[kind]) {
+        const [genres, providers] = await Promise.all([Tmdb.genres(kind), Tmdb.providers(kind)]);
+        optionsCache[kind] = { genres, providers };
+      }
+    } catch {
+      return; // liste gelmezse bu iki kutu sadece "Tümü" seçeneğiyle kalır, diğer filtreler çalışır
+    }
+    if (kind !== state.kind) return; // bu arada Film/Dizi değişti
+    fillBox(filterBoxes.genre, optionsCache[kind].genres, 'Tüm türler');
+    fillBox(filterBoxes.provider, optionsCache[kind].providers, 'Tüm platformlar');
+  }
+
+  // Yıl kutusu: dönemler + bu yıldan 1950'ye tek tek yıllar
+  (function fillYears() {
+    const thisYear = new Date().getFullYear();
+    const decades = [];
+    for (let start = Math.floor(thisYear / 10) * 10; start >= 1970; start -= 10) {
+      decades.push(`<option value="d${start}">${start}'ler</option>`);
+    }
+    const years = [];
+    for (let year = thisYear; year >= 1950; year--) years.push(`<option value="${year}">${year}</option>`);
+    filterBoxes.year.innerHTML = '<option value="">Tüm yıllar</option>' +
+      `<optgroup label="Dönemler">${decades.join('')}</optgroup><optgroup label="Yıllar">${years.join('')}</optgroup>`;
+  })();
 
   let searchTimer = null;
   searchEl.addEventListener('input', () => {
@@ -116,11 +238,14 @@ const Discover = (() => {
       const query = searchEl.value.trim();
       if (query === state.query) return;
       state.query = query.length >= 2 ? query : '';
-      load(true);
+      reload();
     }, 400);
   });
 
-  moreBtn.addEventListener('click', () => load(false));
+  moreBtn.addEventListener('click', () => {
+    topUps = 0;
+    load(false);
+  });
 
   // Yüklenemeyen afişi kaldır, altındaki renkli yer tutucu görünsün
   gridEl.addEventListener('error', event => {
@@ -307,7 +432,8 @@ const Discover = (() => {
       section.hidden = false;
       if (!state.loaded) {
         state.loaded = true;
-        load(true);
+        loadOptions();
+        reload();
       } else {
         draw(); // arşive bir şey eklendiyse "✓" işaretleri güncellensin
       }

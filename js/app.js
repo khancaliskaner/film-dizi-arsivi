@@ -6,7 +6,7 @@
 const PAGES = {
   kesfet: {
     title: 'Keşfet',
-    subtitle: "TMDB'deki popüler ve en beğenilen yapımlar",
+    subtitle: "TMDB'deki film ve diziler: sırala, filtrele, keşfet",
     view: Discover // içeriği js/discover.js çizer
   },
   gunluk: {
