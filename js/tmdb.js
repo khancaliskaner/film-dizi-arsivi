@@ -43,7 +43,8 @@ const Tmdb = {
       poster: result.poster_path || '',
       overview: result.overview || '',
       voteAverage: result.vote_average || 0,
-      originalLanguage: result.original_language || ''
+      originalLanguage: result.original_language || '',
+      releaseDate: /^\d{4}-\d{2}-\d{2}$/.test(result.release_date || result.first_air_date || '') ? (result.release_date || result.first_air_date) : ''
     };
   },
 
@@ -95,6 +96,27 @@ const Tmdb = {
     if (minVotes) params['vote_count.gte'] = minVotes;
 
     return this.toPage(await this.request(`/discover/${kind}`, params), kind);
+  },
+
+  // Takvim listeleri. mode = 'playing' (filmde: şu an Türkiye'de vizyonda, dizide: bu hafta yayınlanan)
+  // ya da 'soon' (filmde: yakında Türkiye'de vizyona girecek, dizide: önümüzdeki 4 ayda başlayacak).
+  async calendar(kind, mode, page) {
+    const day = offset => new Date(Date.now() + offset * 864e5).toISOString().slice(0, 10);
+    let data;
+    if (kind === 'movie') {
+      data = await this.request(`/movie/${mode === 'playing' ? 'now_playing' : 'upcoming'}`, { region: 'TR', page });
+    } else if (mode === 'playing') {
+      data = await this.request('/tv/on_the_air', { page, timezone: 'Europe/Istanbul' });
+    } else {
+      data = await this.request('/discover/tv', {
+        page, include_adult: 'false', sort_by: 'popularity.desc',
+        'first_air_date.gte': day(1), 'first_air_date.lte': day(120)
+      });
+    }
+    const result = this.toPage(data, kind);
+    // "Yakında" listesinde çıkışı geçmiş olanlar görünmesin
+    if (mode === 'soon') result.results = result.results.filter(item => item.releaseDate >= day(0));
+    return result;
   },
 
   // Filtre kutuları için tür listesi (Türkçe adlarıyla)

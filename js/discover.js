@@ -91,10 +91,13 @@ const Discover = (() => {
       emptyNote = '';
       if (state.query) data = await Tmdb.searchKind(state.kind, state.query, next);
       else if (state.sort === 'foryou') data = await forYou();
+      else if (state.sort === 'playing' || state.sort === 'soon') data = await Tmdb.calendar(state.kind, state.sort, next);
       else data = await Tmdb.discover(state.kind, { ...state.filters, sort: state.sort }, next);
       if (token !== loadToken) return;
       const known = new Set(state.items.map(item => item.tmdbId));
       state.items.push(...data.results.filter(item => !known.has(item.tmdbId)));
+      // "Yakında" listesi en yakın çıkış tarihinden başlasın
+      if (state.sort === 'soon' && !state.query) state.items.sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
       state.page = data.page;
       state.totalPages = data.totalPages;
       statusEl.textContent = state.items.length ? '' : (emptyNote || (hasFilters() ? 'Bu filtrelere uyan sonuç bulunamadı.' : 'Sonuç bulunamadı.'));
@@ -161,7 +164,7 @@ const Discover = (() => {
   }
 
   function visibleItems() {
-    if (!state.hideOwned) return state.items.map((item, index) => ({ item, index }));
+    if (!state.hideOwned || !usesFilters()) return state.items.map((item, index) => ({ item, index }));
     const owned = ownedMap();
     return state.items
       .map((item, index) => ({ item, index }))
@@ -170,8 +173,24 @@ const Discover = (() => {
 
   // "Arşivimde olmayanlar" seçiliyken çoğu kart gizlenirse ekran boş kalmasın: sıradaki sayfayı da getir
   function needsTopUp() {
-    return state.hideOwned && !state.loading && state.page < state.totalPages &&
+    return state.hideOwned && usesFilters() && !state.loading && state.page < state.totalPages &&
       topUps < MAX_TOP_UPS && visibleItems().length < MIN_VISIBLE;
+  }
+
+  // Filtre paneli sadece normal listelerde geçerli: arama, "Sana özel" ve takvim listeleri kendi içeriğini kendisi seçer
+  function usesFilters() {
+    return !state.query && !['foryou', 'playing', 'soon'].includes(state.sort);
+  }
+
+  // "Çıkış: 3 Eki 2026 · 4 gün sonra" (takvim listelerinin kartlarında)
+  function releaseLine(date) {
+    // "Yayında" dizilerin tarihi, dizinin ilk yayın tarihidir (yıllar önce olabilir)
+    let line = `${state.kind === 'tv' && state.sort === 'playing' ? 'İlk yayın' : 'Çıkış'}: ${formatDate(date)}`;
+    if (state.sort === 'soon') {
+      const days = Math.round((new Date(date) - new Date(today())) / 864e5);
+      line += days <= 0 ? ' · bugün' : days === 1 ? ' · yarın' : ` · ${days} gün sonra`;
+    }
+    return line;
   }
 
   function hasFilters() {
@@ -208,10 +227,12 @@ const Discover = (() => {
 
     for (const button of kindBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.kind === state.kind);
     for (const button of sortBar.querySelectorAll('button')) button.classList.toggle('active', button.dataset.sort === state.sort);
+    // Filmde "Vizyonda" (sinemada), dizide "Yayında" (bu hafta yayınlanan)
+    sortBar.querySelector('[data-sort="playing"]').textContent = state.kind === 'tv' ? 'Yayında' : 'Vizyonda';
     // Arama yaparken sıralama ve filtreler işe yaramaz (TMDB aramada bunları desteklemiyor)
     // "Sana özel" de kendi önerisini kendisi seçtiği için filtre almaz
     sortBar.hidden = Boolean(state.query);
-    filtersEl.hidden = Boolean(state.query) || state.sort === 'foryou';
+    filtersEl.hidden = !usesFilters();
     clearBtn.hidden = !hasFilters();
   }
 
@@ -234,6 +255,7 @@ const Discover = (() => {
           <p class="card-meta">${escapeHtml([item.year, label].filter(Boolean).join(' · '))}</p>
           ${item.voteAverage ? `<p class="card-tmdb">TMDB ${item.voteAverage.toFixed(1)}</p>` : ''}
           ${item.because ? `<p class="card-because">${escapeHtml(item.because)}</p>` : ''}
+          ${!state.query && ['playing', 'soon'].includes(state.sort) && item.releaseDate ? `<p class="card-release">${releaseLine(item.releaseDate)}</p>` : ''}
         </div>
       </article>`;
   }
