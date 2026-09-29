@@ -31,7 +31,7 @@ const Theme = (() => {
     };
   }
 
-  // Seçilen renkleri CSS değişkenlerine yazar; tarayıcı çubuğu rengini ve sekme ikonunu da günceller
+  // Seçilen renkleri CSS değişkenlerine yazar; telefondaki tarayıcı çubuğunun rengini de günceller
   function apply({ accent, bg }) {
     const a = ACCENTS[accent];
     const b = BACKGROUNDS[bg];
@@ -46,11 +46,6 @@ const Theme = (() => {
     root.setProperty('--border', b.border);
 
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', b.bg);
-    const icon = document.querySelector('link[rel="icon"]');
-    if (icon) {
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${b.bg}"/><rect x="10" y="10" width="44" height="44" rx="8" fill="${a.accent}"/><path d="M27 22l16 10-16 10z" fill="${b.bg}"/></svg>`;
-      icon.setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
-    }
   }
 
   function set(part, id) {

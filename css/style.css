@@ -1251,15 +1251,20 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
 /* Klavyeyle gezenler için her yerde aynı odak halkası */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* Logonun yanında küçük yeşil işaret */
-.logo::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border-radius: 3px;
-  background: var(--accent);
+/* Logo: afişin küçük hali ve yanında site adı */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-img {
+  flex-shrink: 0;
+  width: 29px;
+  height: 44px;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .page-title { font-size: 1.9rem; letter-spacing: -0.02em; }
