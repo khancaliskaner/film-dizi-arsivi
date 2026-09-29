@@ -669,6 +669,61 @@ document.getElementById('settings-form').addEventListener('submit', async event 
   setSettingsStatus(lines.join('\n'), failed ? 'error' : 'ok');
 });
 
+// ---------- Bağlantı testi ----------
+// Afişler / Keşfet / IMDb puanı gelmediğinde sorunun nerede olduğunu gösterir (çoğu zaman internet sağlayıcısının engeli).
+document.getElementById('conn-test-btn').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  const out = document.getElementById('conn-test-result');
+  button.disabled = true;
+  out.hidden = false;
+  out.className = 'hint';
+  out.textContent = 'Test ediliyor…';
+
+  const lines = [];
+  let failed = false;
+  const check = async (name, test) => {
+    try {
+      await test();
+      lines.push(`✓ ${name}`);
+    } catch (error) {
+      failed = true;
+      lines.push(`✗ ${name}: ${error.message}`);
+    }
+  };
+
+  await check('Film/dizi verisi (TMDB)', async () => {
+    if (!Tmdb.isReady()) throw new Error('TMDB anahtarı girilmemiş');
+    try { await Tmdb.test(); } catch (error) { throw new Error(tmdbErrorMessage(error)); }
+  });
+
+  // Afiş sunucusu ayrı bir adres: veri geldiği halde afişler engellenmiş olabilir. Önbelleğe takılmamak için adrese zaman eklenir.
+  await check('Afiş sunucusu (image.tmdb.org)', () => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = resolve;
+    image.onerror = () => reject(new Error('ulaşılamıyor'));
+    image.src = `${Tmdb.posterUrl('/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', 'w92')}?test=${Date.now()}`;
+    setTimeout(() => reject(new Error('zaman aşımı')), 8000);
+  }));
+
+  if (Omdb.isReady()) {
+    await check('IMDb puanı (OMDb)', async () => {
+      try { await Omdb.test(); } catch (error) { throw new Error(omdbErrorMessage(error)); }
+    });
+  } else {
+    lines.push('– IMDb puanı (OMDb): anahtar girilmemiş, atlandı');
+  }
+
+  await check('Fragman (YouTube)', () => fetch('https://www.youtube-nocookie.com/favicon.ico', { mode: 'no-cors', signal: AbortSignal.timeout(6000) })
+    .then(() => {}, () => { throw new Error('ulaşılamıyor'); }));
+
+  if (failed) {
+    lines.push('', "Ulaşılamayan bir servis varsa internet sağlayıcın engelliyor olabilir. Tarayıcında Güvenli DNS'i (Cloudflare) aç; telefonda Ayarlar → Özel DNS → one.one.one.one yaz. Sonra sayfayı yenile.");
+  }
+  out.textContent = lines.join('\n');
+  out.className = 'hint ' + (failed ? 'error' : 'ok');
+  button.disabled = false;
+});
+
 document.getElementById('settings-close').addEventListener('click', () => settingsDialog.close());
 settingsDialog.addEventListener('click', event => {
   if (event.target === settingsDialog) settingsDialog.close();

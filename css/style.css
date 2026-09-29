@@ -429,7 +429,8 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-weight: 400;
 }
 
-#settings-status { white-space: pre-line; } /* satırlar alt alta */
+#settings-status, #conn-test-result { white-space: pre-line; } /* satırlar alt alta */
+.conn-test { border-top: 1px solid var(--border); }
 .hint.ok { color: var(--accent-text); }
 .hint.error { color: var(--danger); }
 

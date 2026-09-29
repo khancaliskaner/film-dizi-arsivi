@@ -74,7 +74,12 @@ const Discover = (() => {
 
   // ---------- Listeyi yükle ve çiz ----------
   async function load(reset) {
-    if (reset) Object.assign(state, { items: [], page: 0, totalPages: 0 });
+    if (reset) {
+      Object.assign(state, { items: [], page: 0, totalPages: 0 });
+      posterOk = 0;
+      posterFail = 0;
+      posterNote.hidden = true;
+    }
     if (!Tmdb.isReady()) {
       statusEl.textContent = "Keşfet için TMDB anahtarı gerekiyor. ⚙ Ayarlar'dan ekleyebilirsin.";
       return draw();
@@ -361,9 +366,23 @@ const Discover = (() => {
     load(false);
   });
 
-  // Yüklenemeyen afişi kaldır, altındaki renkli yer tutucu görünsün
+  // Yüklenemeyen afişi kaldır, altındaki renkli yer tutucu görünsün.
+  // Hiçbiri yüklenmeden 4 afiş üst üste başarısız olursa, sebebi (afiş sunucusuna erişilememesi) kullanıcıya söylenir.
+  const posterNote = document.getElementById('disc-poster-note');
+  let posterOk = 0;
+  let posterFail = 0;
+
+  gridEl.addEventListener('load', event => {
+    if (!event.target.classList.contains('poster-img')) return;
+    posterOk++;
+    posterNote.hidden = true;
+  }, true);
+
   gridEl.addEventListener('error', event => {
-    if (event.target.classList.contains('poster-img')) event.target.remove();
+    if (!event.target.classList.contains('poster-img')) return;
+    event.target.remove();
+    posterFail++;
+    if (posterFail >= 4 && posterOk === 0) posterNote.hidden = false;
   }, true);
 
   function cardFromEvent(event) {

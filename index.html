@@ -141,6 +141,7 @@
         </div>
       </div>
       <p class="hint" id="disc-status"></p>
+      <p class="hint error" id="disc-poster-note" hidden>Afişler yüklenemiyor: afiş sunucusuna (image.tmdb.org) ulaşılamıyor olabilir, internet sağlayıcın engelliyor olabilir. Tarayıcında <strong>Güvenli DNS'i</strong> aç (Cloudflare), sonra sayfayı yenile. Ayrıntı için ⚙ Ayarlar → Bağlantıyı test et.</p>
       <div class="grid" id="disc-grid"></div>
       <button type="button" class="btn" id="disc-more" hidden>Daha fazla göster</button>
     </section>
@@ -405,6 +406,16 @@
       <div class="form-actions">
         <button type="button" class="btn btn-small" id="theme-reset">Varsayılana dön</button>
       </div>
+    </div>
+
+    <!-- Bağlantı testi: js/app.js -->
+    <div class="dialog-form conn-test">
+      <h2>Bağlantıyı test et</h2>
+      <p class="hint">Afişler, Keşfet veya IMDb puanı gelmiyorsa hangi servise ulaşılamadığını buradan görebilirsin.</p>
+      <div class="backup-actions">
+        <button type="button" class="btn" id="conn-test-btn">Testi başlat</button>
+      </div>
+      <p class="hint" id="conn-test-result" hidden></p>
     </div>
 
     <!-- Uygulama olarak kurma: js/pwa.js -->
