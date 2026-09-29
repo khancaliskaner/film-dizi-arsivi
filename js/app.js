@@ -1,15 +1,9 @@
 // Arayüz mantığı: sayfalar arası geçiş, arama/filtre/sıralama, kartlar, ekleme/düzenleme formu (TMDB aramasıyla), yarım yıldızlı puanlama ve ayarlar.
 
 // ---------- Sayfalar ----------
-// Her sayfa hangi kayıtları göstereceğini belirler.
-// toolbar: arama/filtre çubuğu görünsün mü, hide: o sayfada anlamsız olan filtreler.
+// Arşiv listesi sayfaları (filter ile) hangi kayıtları göstereceğini belirler; hide: o sayfada anlamsız olan filtreler.
+// view olan sayfalar ise kendi içeriğini kendi dosyasında çizer.
 const PAGES = {
-  ana: {
-    title: 'Son İzlenenler',
-    empty: 'Henüz bir şey izlemedin. Sağ üstteki "+ Ekle" ile başla.',
-    filter: item => item.status === 'izledim',
-    limit: 12
-  },
   kesfet: {
     title: 'Keşfet',
     subtitle: "TMDB'deki popüler ve en beğenilen yapımlar",
@@ -28,21 +22,18 @@ const PAGES = {
   arsiv: {
     title: 'Arşiv',
     empty: 'Arşivin boş. Sağ üstteki "+ Ekle" ile başla.',
-    filter: () => true,
-    toolbar: true
+    filter: () => true
   },
   izlediklerim: {
     title: 'İzlediklerim',
     empty: 'İzlediğin film veya dizi yok.',
     filter: item => item.status === 'izledim',
-    toolbar: true,
     hide: ['status']
   },
   liste: {
     title: 'İzleme Listem',
     empty: 'İzleme listen boş.',
     filter: item => item.status === 'izlenecek',
-    toolbar: true,
     hide: ['status', 'rating', 'liked']
   },
   listelerim: {
@@ -77,7 +68,7 @@ const SORTS = {
 // Adres "#listelerim/abc123" gibi olabilir; "/" öncesi sayfa adıdır, sonrası sayfanın kendi işidir.
 function currentPage() {
   const name = location.hash.slice(1).split('/')[0];
-  return PAGES[name] ? name : 'ana';
+  return PAGES[name] ? name : 'kesfet'; // açılış sayfası
 }
 
 // ---------- Yardımcılar ----------
@@ -220,18 +211,13 @@ function render() {
 
   const pageItems = Storage.getAll().filter(page.filter);
   const total = pageItems.length;
-  let items;
 
-  toolbar.hidden = !page.toolbar || total === 0;
-  if (page.toolbar) {
-    setupToolbar(page);
-    fillYearOptions(pageItems);
-    items = applyFilters(pageItems).sort(SORTS[filters.sort]);
-  } else {
-    items = pageItems.sort(byWatchedDateDesc).slice(0, page.limit);
-  }
+  toolbar.hidden = total === 0;
+  setupToolbar(page);
+  fillYearOptions(pageItems);
+  const items = applyFilters(pageItems).sort(SORTS[filters.sort]);
 
-  const filtered = page.toolbar && hasActiveFilters();
+  const filtered = hasActiveFilters();
   document.getElementById('clear-filters').hidden = !filtered;
   document.getElementById('page-title').textContent = page.title;
   document.getElementById('page-subtitle').textContent =
@@ -254,9 +240,12 @@ function cardHtml(item, options = {}) {
     ? `<img class="poster-img" src="${Tmdb.posterUrl(item.poster)}" alt="${escapeHtml(item.title)} afişi" loading="lazy">`
     : '';
 
+  // TMDB'den eklenmiş kayıtlarda afişe / başlığa basınca detay penceresi açılır
+  const detailClass = item.tmdbId ? 'has-detail' : '';
+
   return `
-    <article class="card">
-      <div class="poster" style="--hue:${hue}">
+    <article class="card" data-id="${item.id}">
+      <div class="poster ${detailClass}" style="--hue:${hue}">
         <span class="poster-letter">${escapeHtml(item.title.charAt(0).toUpperCase())}</span>
         <span class="poster-title">${escapeHtml(item.title)}</span>
         ${poster}
@@ -267,7 +256,7 @@ function cardHtml(item, options = {}) {
         </div>
       </div>
       <div class="card-body">
-        <h3 class="card-title">${escapeHtml(item.title)}</h3>
+        <h3 class="card-title ${detailClass}">${escapeHtml(item.title)}</h3>
         <p class="card-meta">${escapeHtml(meta)}</p>
         ${item.rating ? `<p class="card-stars" title="${item.rating} / 5">${starText(item.rating)}</p>` : ''}
         ${date ? `<p class="card-date">${date}</p>` : ''}
@@ -292,7 +281,23 @@ grid.addEventListener('error', removeBrokenPoster, true);
 // Tek bir dinleyiciyle hepsini yakalıyoruz; özel liste sayfasındaki kartlar da bunu kullanır.
 function handleCardClick(event) {
   const button = event.target.closest('button[data-action]');
-  if (!button) return;
+  if (!button) {
+    // Düğme dışında afişe / başlığa basıldı: TMDB bağlantılıysa detay penceresini aç (nereden izlenir, yorumlar)
+    const target = event.target.closest('.has-detail');
+    const entry = target && Storage.getById(target.closest('.card').dataset.id);
+    if (entry) {
+      Discover.openDetail({
+        tmdbId: entry.tmdbId,
+        tmdbType: entry.tmdbType,
+        title: entry.title,
+        year: entry.year,
+        poster: entry.poster,
+        overview: entry.overview,
+        voteAverage: 0
+      });
+    }
+    return;
+  }
   const item = Storage.getById(button.dataset.id);
   if (!item) return;
 

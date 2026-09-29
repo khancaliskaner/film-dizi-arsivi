@@ -104,6 +104,32 @@ const Tmdb = {
     };
   },
 
+  // Türkiye'de şu an hangi platformlarda izlenebildiği (veriyi TMDB'ye JustWatch sağlıyor).
+  // Dönen değer: { link, groups: [{ label, providers: [{ name, logo }] }] }; hiç platform yoksa groups boş.
+  async watchProviders(kind, id) {
+    const data = await this.request(`/${kind}/${id}/watch/providers`);
+    const turkey = data.results?.TR || {};
+    const labels = [
+      ['flatrate', 'Abonelikle izle'],
+      ['free', 'Ücretsiz'],
+      ['ads', 'Reklamlı ücretsiz'],
+      ['rent', 'Kirala'],
+      ['buy', 'Satın al']
+    ];
+    return {
+      link: turkey.link || '',
+      groups: labels
+        .filter(([key]) => turkey[key]?.length)
+        .map(([key, label]) => ({
+          label,
+          providers: turkey[key].map(provider => ({
+            name: provider.provider_name,
+            logo: this.posterUrl(provider.logo_path, 'w92')
+          }))
+        }))
+    };
+  },
+
   // Anahtarın çalışıp çalışmadığını dener (Ayarlar penceresindeki "Kaydet" için).
   async test() {
     await this.request('/configuration');

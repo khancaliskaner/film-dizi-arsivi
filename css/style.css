@@ -836,6 +836,51 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   font-size: 0.7rem;
 }
 
+/* ---------- Nereden izlenir? ---------- */
+.has-detail { cursor: pointer; }
+.card-title.has-detail:hover { text-decoration: underline; }
+
+.watch-group { margin-bottom: 10px; }
+
+.watch-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.providers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.provider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.provider img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
+
+.watch-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* ---------- Kalp ve liste düğmeleri (kartların afişinde) ---------- */
 .card-fabs {
   position: absolute;

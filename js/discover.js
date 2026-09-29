@@ -11,6 +11,7 @@ const Discover = (() => {
 
   const detailDialog = document.getElementById('detail-dialog');
   const reviewsEl = document.getElementById('detail-reviews');
+  const watchEl = document.getElementById('detail-watch');
   const actionsEl = document.getElementById('detail-actions');
 
   const state = { kind: 'movie', list: 'popular', query: '', page: 0, totalPages: 0, items: [], loading: false, loaded: false };
@@ -165,13 +166,17 @@ const Discover = (() => {
     posterEl.hidden = !item.poster;
     if (item.poster) posterEl.src = Tmdb.posterUrl(item.poster, 'w342');
     drawActions();
+    watchEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     reviewsEl.innerHTML = '<p class="hint">Yorumlar yükleniyor…</p>';
     detailDialog.showModal();
     detailDialog.scrollTop = 0;
+    // Üçü birbirini beklemeden çalışır; biri başarısız olsa da diğerleri gösterilir
     loadDetails(item, token);
+    loadWatch(item, token);
+    loadReviews(item, token);
   }
 
-  // Kategorileri, özeti ve yorumları getir; biri başarısız olsa da diğeri gösterilir
+  // Kategoriler ve özet
   async function loadDetails(item, token) {
     try {
       const details = await Tmdb.details(item.tmdbType, item.tmdbId);
@@ -182,7 +187,37 @@ const Discover = (() => {
     } catch {
       // ayrıntılar gelmezse liste bilgileri yeterli
     }
+  }
 
+  // Nereden izlenir? (Türkiye'deki platformlar)
+  async function loadWatch(item, token) {
+    try {
+      const watch = await Tmdb.watchProviders(item.tmdbType, item.tmdbId);
+      if (token !== detailToken) return;
+      if (!watch.groups.length) {
+        watchEl.innerHTML = "<p class=\"hint\">Türkiye'de şu an bir platformda görünmüyor.</p>";
+        return;
+      }
+      watchEl.innerHTML = watch.groups.map(group => `
+        <div class="watch-group">
+          <span class="watch-label">${group.label}</span>
+          <ul class="providers">
+            ${group.providers.map(provider => `
+              <li class="provider" title="${escapeHtml(provider.name)}">
+                ${provider.logo ? `<img src="${provider.logo}" alt="" loading="lazy">` : ''}
+                <span>${escapeHtml(provider.name)}</span>
+              </li>`).join('')}
+          </ul>
+        </div>`).join('') +
+        (watch.link.startsWith('https://') ? `<a class="watch-link" href="${escapeHtml(watch.link)}" target="_blank" rel="noopener noreferrer">Tüm seçenekleri TMDB'de gör ↗</a>` : '');
+    } catch (error) {
+      if (token !== detailToken) return;
+      watchEl.innerHTML = `<p class="hint error">Platform bilgisi getirilemedi. ${escapeHtml(tmdbErrorMessage(error))}</p>`;
+    }
+  }
+
+  // Dünyadan yorumlar
+  async function loadReviews(item, token) {
     try {
       const reviews = await Tmdb.reviews(item.tmdbType, item.tmdbId);
       if (token !== detailToken) return;
@@ -266,7 +301,7 @@ const Discover = (() => {
   });
   document.getElementById('detail-poster').addEventListener('error', event => { event.target.hidden = true; });
 
-  // ---------- app.js'nin kullandığı iki fonksiyon ----------
+  // ---------- app.js'nin kullandığı fonksiyonlar ----------
   return {
     show() {
       section.hidden = false;
@@ -279,6 +314,8 @@ const Discover = (() => {
     },
     hide() {
       section.hidden = true;
-    }
+    },
+    // Arşivdeki bir kart da aynı detay penceresini açabilsin (TMDB'den eklenmişse)
+    openDetail
   };
 })();
