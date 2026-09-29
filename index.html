@@ -145,6 +145,18 @@
         <p class="chart-readout" id="rating-readout" aria-live="polite"></p>
         <div class="bars" id="rating-chart"></div>
       </div>
+
+      <!-- Seçili yılın izlediklerini metin olarak paylaş -->
+      <div class="chart-card">
+        <h3>Bu yıl izlediklerimi paylaş</h3>
+        <p class="chart-readout">Seçili yılın listesi, WhatsApp veya Instagram'a yapıştırabileceğin bir metin olarak hazır.</p>
+        <textarea id="share-text" class="share-text" readonly rows="8" aria-label="Paylaşılacak metin"></textarea>
+        <div class="backup-actions">
+          <button type="button" class="btn btn-primary" id="share-copy">Metni kopyala</button>
+          <button type="button" class="btn" id="share-native" hidden>Paylaş…</button>
+        </div>
+        <p class="hint" id="share-status" hidden></p>
+      </div>
     </section>
 
     <!-- Listelerim sayfası: içeriği js/lists.js çizer -->

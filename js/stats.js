@@ -1,10 +1,14 @@
-// İstatistik sayfası: seçilen yıl için izleme sayıları, ortalama puan, en çok izlenen tür, aylık izleme ve puan dağılımı grafikleri.
+// İstatistik sayfası: seçilen yıl için izleme sayıları, ortalama puan, en çok izlenen tür, aylık izleme ve puan dağılımı grafikleri, paylaşım metni.
 
 const Stats = (() => {
   const section = document.getElementById('stats');
   const yearSelect = document.getElementById('stats-year');
   const tilesEl = document.getElementById('stat-tiles');
   const noteEl = document.getElementById('stats-note');
+  const shareTextEl = document.getElementById('share-text');
+  const shareCopyBtn = document.getElementById('share-copy');
+  const shareNativeBtn = document.getElementById('share-native');
+  const shareStatusEl = document.getElementById('share-status');
 
   const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
   const MONTHS_LONG = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -98,10 +102,73 @@ const Stats = (() => {
       common ? `En sık verdiğin puan: ${RATING_LABELS[perRating.indexOf(common)]} yıldız (${common} yapım)` : 'Bu yıl puanladığın bir şey yok.'
     );
 
+    shareTextEl.value = shareText(items, films, series, average);
+    const empty = items.length === 0;
+    shareCopyBtn.disabled = empty;
+    shareNativeBtn.disabled = empty;
+    setShareStatus('');
+
     // Tarihi olmayan izlenenler hiçbir yıla sayılamaz; kullanıcıya haber ver
     const undated = watched.length - dated.length;
     noteEl.textContent = undated ? `${undated} izlenen kaydın izleme tarihi girilmemiş, bu yüzden istatistiğe katılmadı.` : '';
     noteEl.hidden = !undated;
+  }
+
+  // ---------- Paylaşım metni ----------
+  // Seçili yılın izlediklerini ay ay listeleyen, mesajlaşma uygulamalarına yapıştırılabilir düz metin
+  function shareText(items, films, series, average) {
+    if (!items.length) return `${year} yılında izleme kaydı yok.`;
+
+    const lines = [`🎬 ${year} yılında izlediklerim`];
+    const summary = [`${items.length} yapım`];
+    if (films) summary.push(`${films} film`);
+    if (series) summary.push(`${series} dizi`);
+    if (average !== null) summary.push(`ortalama ★ ${format(average)}`);
+    lines.push(summary.join(' · '), '');
+
+    const sorted = [...items].sort((a, b) => a.watchedDate.localeCompare(b.watchedDate) || a.title.localeCompare(b.title, 'tr'));
+    let lastMonth = -1;
+    for (const item of sorted) {
+      const month = Number(item.watchedDate.slice(5, 7)) - 1;
+      if (month !== lastMonth) {
+        if (lastMonth !== -1) lines.push('');
+        lines.push(MONTHS_LONG[month].toLocaleUpperCase('tr'));
+        lastMonth = month;
+      }
+      const details = [item.year ? `(${item.year})` : '', starText(item.rating), item.liked ? '♥' : ''].filter(Boolean);
+      lines.push(`• ${[item.title, ...details].join(' ')}`);
+    }
+    return lines.join('\n');
+  }
+
+  function setShareStatus(message, kind = '') {
+    shareStatusEl.textContent = message;
+    shareStatusEl.className = 'hint ' + kind;
+    shareStatusEl.hidden = !message;
+  }
+
+  shareCopyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareTextEl.value);
+    } catch {
+      // Panoya doğrudan yazılamıyorsa (eski tarayıcı vb.) metni seçip kopyalama komutunu dene
+      shareTextEl.select();
+      if (!document.execCommand('copy')) return setShareStatus('Kopyalanamadı. Kutudaki metni elle seçip kopyalayabilirsin.', 'error');
+    }
+    setShareStatus('✓ Kopyalandı. Şimdi istediğin yere yapıştırabilirsin.', 'ok');
+  });
+
+  // Telefonlarda "Paylaş" menüsünü (WhatsApp, Instagram…) doğrudan açar; desteklemeyen tarayıcıda düğme görünmez
+  if (navigator.share) {
+    shareNativeBtn.hidden = false;
+    shareNativeBtn.addEventListener('click', async () => {
+      try {
+        await navigator.share({ title: `${year} yılında izlediklerim`, text: shareTextEl.value });
+      } catch (error) {
+        // Kullanıcı paylaşımdan vazgeçtiyse hata sayılmaz
+        if (error.name !== 'AbortError') setShareStatus('Paylaşılamadı. "Metni kopyala" düğmesini deneyebilirsin.', 'error');
+      }
+    });
   }
 
   function tile(value, label, sub = '', isText = false) {
