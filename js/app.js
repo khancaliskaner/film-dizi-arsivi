@@ -681,6 +681,7 @@ document.getElementById('conn-test-btn').addEventListener('click', async event =
 
   const lines = [];
   let failed = false;
+  let hiddenPoster = false; // afiş yüklendi ama bir eklenti sayfada gizledi
   const check = async (name, test) => {
     try {
       await test();
@@ -705,6 +706,41 @@ document.getElementById('conn-test-btn').addEventListener('click', async event =
     setTimeout(() => reject(new Error('zaman aşımı')), 8000);
   }));
 
+  // Kartlardaki afişler sayfanın içinde <img> etiketi olarak durur. Bir tarayıcı eklentisi / reklam engelleyici bunları
+  // gizleyebilir. Burada kart gibi bir afiş gerçekten sayfaya eklenir; yüklenip yüklenmediği ve görünür olup olmadığı ölçülür.
+  await check('Kart biçiminde afiş (sayfada görünürlük)', () => new Promise((resolve, reject) => {
+    const box = document.createElement('div');
+    box.className = 'poster';
+    box.style.cssText = 'position:absolute;left:-9999px;top:0;width:120px;';
+    const image = document.createElement('img');
+    image.className = 'poster-img';
+    image.alt = '';
+    image.src = `${Tmdb.posterUrl('/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg')}?kart=${Date.now()}`;
+    box.append(image);
+    document.body.append(box);
+    const finish = (error) => {
+      // Ölçümler kutu sayfadan silinmeden önce okunur
+      const { display, visibility } = getComputedStyle(image);
+      const width = Math.round(image.getBoundingClientRect().width);
+      box.remove();
+      if (error) return reject(new Error(error));
+      if (display === 'none' || visibility === 'hidden' || width === 0) {
+        hiddenPoster = true;
+        return reject(new Error(`yüklendi ama sayfada gizli (display: ${display}, genişlik: ${width})`));
+      }
+      resolve();
+    };
+    image.onload = () => finish('');
+    image.onerror = () => finish('yüklenemedi');
+    setTimeout(() => finish('zaman aşımı'), 8000);
+  }));
+
+  // Sayfada şu an duran gerçek kart afişleri ve servis çalışanı durumu (bilgi amaçlı)
+  const shown = [...document.querySelectorAll('.poster-img')];
+  const okCount = shown.filter(image => image.complete && image.naturalWidth > 0).length;
+  const cachedPosters = 'caches' in window ? (await caches.open('arsiv-afisler').then(cache => cache.keys()).catch(() => [])).length : 0;
+  lines.push(`ℹ Sayfada ${shown.length} afiş etiketi var, ${okCount} tanesi yüklü. Servis çalışanı: ${navigator.serviceWorker?.controller ? 'aktif' : 'yok'}, saklanan afiş: ${cachedPosters}.`);
+
   if (Omdb.isReady()) {
     await check('IMDb puanı (OMDb)', async () => {
       try { await Omdb.test(); } catch (error) { throw new Error(omdbErrorMessage(error)); }
@@ -716,7 +752,10 @@ document.getElementById('conn-test-btn').addEventListener('click', async event =
   await check('Fragman (YouTube)', () => fetch('https://www.youtube-nocookie.com/favicon.ico', { mode: 'no-cors', signal: AbortSignal.timeout(6000) })
     .then(() => {}, () => { throw new Error('ulaşılamıyor'); }));
 
-  if (failed) {
+  if (hiddenPoster) {
+    lines.push('', "Afişler yükleniyor ama tarayıcı onları sayfada gizliyor. Büyük ihtimalle reklam/izleyici engelleyici ya da bir eklenti. Opera'da adres çubuğundaki kalkan simgesinden bu site için reklam engelleyiciyi kapat (veya eklentileri geçici olarak kapat), sonra sayfayı yenile.");
+  }
+  if (failed && !hiddenPoster) {
     lines.push('', "Ulaşılamayan bir servis varsa internet sağlayıcın engelliyor olabilir. Tarayıcında Güvenli DNS'i (Cloudflare) aç; telefonda Ayarlar → Özel DNS → one.one.one.one yaz. Sonra sayfayı yenile.");
   }
   out.textContent = lines.join('\n');
