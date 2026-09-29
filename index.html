@@ -13,6 +13,7 @@
       <a href="#ana" class="logo">KAAN'IN NİŞ SEÇİMLERİ</a>
       <nav class="nav">
         <a href="#ana" data-page="ana">Ana Sayfa</a>
+        <a href="#kesfet" data-page="kesfet">Keşfet</a>
         <a href="#arsiv" data-page="arsiv">Arşiv</a>
         <a href="#izlediklerim" data-page="izlediklerim">İzlediklerim</a>
         <a href="#liste" data-page="liste">İzleme Listem</a>
@@ -64,7 +65,48 @@
     </div>
     <div class="grid" id="grid"></div>
     <p class="empty" id="empty" hidden></p>
+
+    <!-- Keşfet sayfası: TMDB'deki popüler / en beğenilen yapımlar -->
+    <section id="discover" hidden>
+      <div class="discover-controls">
+        <div class="segmented" id="disc-kind">
+          <button type="button" data-kind="movie">Filmler</button>
+          <button type="button" data-kind="tv">Diziler</button>
+        </div>
+        <div class="segmented" id="disc-list">
+          <button type="button" data-list="popular">En çok izlenen</button>
+          <button type="button" data-list="top_rated">En beğenilen</button>
+        </div>
+        <input type="search" id="disc-search" placeholder="TMDB'de ara…" aria-label="TMDB'de ara" autocomplete="off">
+      </div>
+      <p class="hint" id="disc-status"></p>
+      <div class="grid" id="disc-grid"></div>
+      <button type="button" class="btn" id="disc-more" hidden>Daha fazla göster</button>
+    </section>
   </main>
+
+  <!-- Keşfet: yapım detayı ve dünyadan yorumlar -->
+  <dialog id="detail-dialog">
+    <div class="detail">
+      <div class="detail-head">
+        <img id="detail-poster" alt="">
+        <div class="detail-info">
+          <div class="detail-top">
+            <h2 id="detail-title"></h2>
+            <button type="button" class="btn btn-icon" id="detail-close" aria-label="Kapat">✕</button>
+          </div>
+          <p class="muted" id="detail-meta"></p>
+          <p class="preview-genres" id="detail-genres"></p>
+          <p class="detail-vote" id="detail-vote"></p>
+        </div>
+      </div>
+      <p class="detail-overview" id="detail-overview"></p>
+      <div class="detail-actions" id="detail-actions"></div>
+      <h3 class="detail-subtitle">Dünyadan yorumlar</h3>
+      <p class="hint">Yorumlar TMDB kullanıcılarına aittir, çoğu İngilizcedir ve spoiler içerebilir.</p>
+      <div id="detail-reviews"></div>
+    </div>
+  </dialog>
 
   <!-- Ekleme / düzenleme formu (açılır pencere) -->
   <dialog id="form-dialog">
@@ -159,6 +201,7 @@
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/tmdb.js"></script>
+  <script src="js/discover.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

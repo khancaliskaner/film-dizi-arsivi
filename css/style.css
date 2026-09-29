@@ -518,6 +518,144 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
   overflow: hidden;
 }
 
+/* ---------- Keşfet ---------- */
+.discover-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segmented button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button.active { background: var(--surface-2); color: var(--text); }
+
+.discover-controls input[type="search"] {
+  flex: 1;
+  min-width: 180px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.discover-controls input:focus,
+.discover-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.discover-card { cursor: pointer; }
+.discover-card:hover { border-color: var(--muted); }
+.card-tmdb { color: var(--muted); font-size: 0.8rem; }
+.card-body:last-child { padding-bottom: 12px; }
+
+.owned-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+#disc-status { margin-bottom: 12px; }
+#disc-more { display: block; margin: 28px auto 0; min-width: 200px; }
+
+/* ---------- Keşfet: detay penceresi ve yorumlar ---------- */
+#detail-dialog { width: min(720px, calc(100% - 32px)); }
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.detail-head { display: flex; gap: 16px; }
+
+.detail-head img {
+  flex-shrink: 0;
+  width: 120px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.detail-info { flex: 1; min-width: 0; }
+.detail-info p { margin: 0 0 6px; }
+
+.detail-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.detail-top h2 { margin: 0 0 4px; font-size: 1.35rem; overflow-wrap: anywhere; }
+.detail-top .btn-icon { flex-shrink: 0; min-height: 40px; width: 40px; font-size: 1rem; }
+.detail-vote { font-weight: 600; font-size: 0.9rem; }
+.detail-overview { margin: 0; color: #c3ccd5; }
+.detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.detail-subtitle { margin: 8px 0 0; font-size: 1.05rem; }
+
+.review {
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.review p { margin: 0; }
+
+.review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.review-rating { color: var(--star); font-weight: 600; }
+
+.review-text {
+  margin-top: 6px !important;
+  font-size: 0.9rem;
+  color: #c3ccd5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.review .btn { margin-top: 8px; }
+
 /* ---------- Telefon ---------- */
 @media (max-width: 640px) {
   .header-inner { flex-wrap: wrap; gap: 8px; }
@@ -527,7 +665,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
     flex-basis: 100%;
     overflow-x: auto;
   }
-  .nav a { flex: 1; text-align: center; padding: 8px 6px; font-size: 0.85rem; }
+  .nav a { flex: 1; text-align: center; padding: 8px 6px; font-size: 0.8rem; }
+  .nav { scrollbar-width: none; }
+  .discover-controls .segmented { flex: 1; }
+  .segmented button { flex: 1; padding: 0 8px; font-size: 0.85rem; }
+  .detail-head img { width: 90px; }
   .grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;

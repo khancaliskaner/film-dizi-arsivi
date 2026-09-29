@@ -10,6 +10,10 @@ const PAGES = {
     filter: item => item.status === 'izledim',
     limit: 12
   },
+  kesfet: {
+    title: 'Keşfet',
+    discover: true // içeriği js/discover.js çizer
+  },
   arsiv: {
     title: 'Arşiv',
     empty: 'Arşivin boş. Sağ üstteki "+ Ekle" ile başla.',
@@ -171,6 +175,18 @@ function render() {
   document.querySelectorAll('.nav a').forEach(link => {
     link.classList.toggle('active', link.dataset.page === pageName);
   });
+
+  // Keşfet sayfası kendi içeriğini çizer; arşiv listesi ve araç çubuğu gizlenir
+  if (page.discover) {
+    toolbar.hidden = true;
+    grid.innerHTML = '';
+    emptyText.hidden = true;
+    document.getElementById('page-title').textContent = page.title;
+    document.getElementById('page-subtitle').textContent = "TMDB'deki popüler ve en beğenilen yapımlar";
+    Discover.show();
+    return;
+  }
+  Discover.hide();
 
   const pageItems = Storage.getAll().filter(page.filter);
   const total = pageItems.length;
@@ -441,7 +457,8 @@ function updateWatchedFields() {
 }
 
 function openForm(item = null) {
-  editingId = item ? item.id : null;
+  // item kayıtlıysa (id'si varsa) düzenleme, yoksa yeni kayıt (Keşfet'ten ön dolu gelebilir)
+  editingId = item?.id || null;
   form.reset();
   formError.hidden = true;
   stopSearch();
@@ -454,7 +471,7 @@ function openForm(item = null) {
     overview: item.overview || '',
     genres: item.genres || []
   } : null);
-  document.getElementById('form-title').textContent = item ? 'Kaydı Düzenle' : 'Yeni Kayıt';
+  document.getElementById('form-title').textContent = editingId ? 'Kaydı Düzenle' : 'Yeni Kayıt';
 
   if (item) {
     fields.title.value = item.title;
