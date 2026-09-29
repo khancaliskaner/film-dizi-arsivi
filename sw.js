@@ -2,7 +2,7 @@
 // Not: index.html'e yeni bir dosya (js/css/img) eklenirse aşağıdaki APP_FILES listesine de ekle.
 
 const APP_CACHE = 'arsiv-uygulama';
-const IMAGE_CACHE = 'arsiv-afisler';
+const IMAGE_CACHE = 'arsiv-afisler-2'; // adı değişince eski (bozuk olabilecek) afiş kopyaları etkinleşirken silinir
 const MAX_IMAGES = 300; // saklanacak en fazla afiş sayısı (fazlası eskiden başlayarak silinir)
 const NETWORK_TIMEOUT = 4000; // internet 4 saniyede cevap vermezse saklanan sürüm açılır
 
@@ -39,8 +39,14 @@ self.addEventListener('install', event => {
   })());
 });
 
+// Etkinleşirken bu dosyanın tanımadığı eski önbellekleri sil (ör. adı değişen eski afiş önbelleği)
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    for (const name of await caches.keys()) {
+      if (name !== APP_CACHE && name !== IMAGE_CACHE) await caches.delete(name);
+    }
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', event => {
@@ -81,15 +87,22 @@ function fetchWithTimeout(request) {
   return fetch(request, { cache: 'no-cache', signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
+// Sadece gerçekten resim olan başarılı cevaplar saklanır ve saklanandan okunur
+// (ör. engel sayfası gibi resim olmayan bir cevap saklanmış olsa bile bir daha gösterilmez)
+const isImage = response => response.ok && (response.headers.get('content-type') || '').startsWith('image/');
+
 // Afişler: bir kez görüldüyse saklanandan gelir (hem hızlı hem çevrimdışı çalışır)
 async function cacheFirstImage(request) {
   const cache = await caches.open(IMAGE_CACHE);
   const cached = await cache.match(request.url);
-  if (cached) return cached;
+  if (cached) {
+    if (isImage(cached)) return cached;
+    await cache.delete(request.url); // bozuk kopya: sil ve yeniden internetten al
+  }
   try {
     // "cors" ile istenir: tuvalde kullanılabilir olur ve saklama kotası şişmez (opak yanıtlar çok yer sayılır)
     const response = await fetch(request.url, { mode: 'cors' });
-    if (response.ok) {
+    if (isImage(response)) {
       await cache.put(request.url, response.clone());
       trimImages(cache);
     }

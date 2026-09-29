@@ -693,6 +693,8 @@ const Discover = (() => {
       section.hidden = true;
     },
     // Arşivdeki bir kart da aynı detay penceresini açabilsin (TMDB'den eklenmişse)
-    openDetail
+    openDetail,
+    // Sayfadaki ilk n kartın afiş adresleri (Ayarlar'daki bağlantı testi bunları tek tek inceler)
+    samplePosters: count => state.items.filter(item => item.poster).slice(0, count).map(item => Tmdb.posterUrl(item.poster))
   };
 })();

@@ -738,8 +738,25 @@ document.getElementById('conn-test-btn').addEventListener('click', async event =
   // Sayfada şu an duran gerçek kart afişleri ve servis çalışanı durumu (bilgi amaçlı)
   const shown = [...document.querySelectorAll('.poster-img')];
   const okCount = shown.filter(image => image.complete && image.naturalWidth > 0).length;
-  const cachedPosters = 'caches' in window ? (await caches.open('arsiv-afisler').then(cache => cache.keys()).catch(() => [])).length : 0;
+  const cachedPosters = 'caches' in window ? (await caches.open('arsiv-afisler-2').then(cache => cache.keys()).catch(() => [])).length : 0;
   lines.push(`ℹ Sayfada ${shown.length} afiş etiketi var, ${okCount} tanesi yüklü. Servis çalışanı: ${navigator.serviceWorker?.controller ? 'aktif' : 'yok'}, saklanan afiş: ${cachedPosters}.`);
+
+  // Keşfet'teki ilk 2 kartın afişini olduğu gibi (aynı adresle) incele: saklı kopyası var mı, gerçek bir resim mi, yükleniyor mu
+  for (const url of Discover.samplePosters(2)) {
+    let stored = 'saklı kopya yok';
+    try {
+      const copy = await caches.match(url);
+      if (copy) stored = `saklı kopya: ${copy.status}, ${copy.headers.get('content-type')}, ${(await copy.clone().blob()).size} bayt`;
+    } catch { stored = 'saklı kopya okunamadı'; }
+    const loaded = await new Promise(resolve => {
+      const image = new Image();
+      image.onload = () => resolve(`yüklendi (${image.naturalWidth}x${image.naturalHeight})`);
+      image.onerror = () => resolve('YÜKLENEMEDİ');
+      image.src = url;
+      setTimeout(() => resolve('zaman aşımı'), 8000);
+    });
+    lines.push(`ℹ …${url.slice(url.lastIndexOf('/', url.lastIndexOf('/') - 1))}: ${stored}; ${loaded}`);
+  }
 
   if (Omdb.isReady()) {
     await check('IMDb puanı (OMDb)', async () => {
