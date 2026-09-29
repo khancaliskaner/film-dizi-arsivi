@@ -156,6 +156,19 @@ const Tmdb = {
     };
   },
 
+  // Oyuncular (ilk 12, başrolden başlayarak) ve filmlerde yönetmen. Dizilerde tüm sezonların oyuncuları gelir.
+  async credits(kind, id) {
+    const data = await this.request(`/${kind}/${id}/${kind === 'tv' ? 'aggregate_credits' : 'credits'}`);
+    return {
+      cast: (data.cast || []).slice(0, 12).map(person => ({
+        name: person.name,
+        character: (kind === 'tv' ? person.roles?.[0]?.character : person.character) || '',
+        photo: this.posterUrl(person.profile_path, 'w185')
+      })),
+      directors: (data.crew || []).filter(person => person.job === 'Director').map(person => person.name)
+    };
+  },
+
   // Türkiye'de şu an hangi platformlarda izlenebildiği (veriyi TMDB'ye JustWatch sağlıyor).
   // Dönen değer: { link, groups: [{ label, providers: [{ name, logo }] }] }; hiç platform yoksa groups boş.
   async watchProviders(kind, id) {

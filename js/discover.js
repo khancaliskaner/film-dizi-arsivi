@@ -22,6 +22,12 @@ const Discover = (() => {
   const detailDialog = document.getElementById('detail-dialog');
   const reviewsEl = document.getElementById('detail-reviews');
   const watchEl = document.getElementById('detail-watch');
+  const castEl = document.getElementById('detail-cast');
+
+  // Fotoğrafı yüklenemeyen oyuncuda baş harfli renkli daire görünür
+  castEl.addEventListener('error', event => {
+    if (event.target.tagName === 'IMG') event.target.remove();
+  }, true);
   const actionsEl = document.getElementById('detail-actions');
 
   const NO_FILTERS = { genre: '', year: '', minRating: '', language: '', provider: '' };
@@ -291,14 +297,40 @@ const Discover = (() => {
     posterEl.hidden = !item.poster;
     if (item.poster) posterEl.src = Tmdb.posterUrl(item.poster, 'w342');
     drawActions();
+    document.getElementById('detail-director').textContent = '';
+    castEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     watchEl.innerHTML = '<p class="hint">Yükleniyor…</p>';
     reviewsEl.innerHTML = '<p class="hint">Yorumlar yükleniyor…</p>';
     detailDialog.showModal();
     detailDialog.scrollTop = 0;
-    // Üçü birbirini beklemeden çalışır; biri başarısız olsa da diğerleri gösterilir
+    // Dördü birbirini beklemeden çalışır; biri başarısız olsa da diğerleri gösterilir
     loadDetails(item, token);
+    loadCast(item, token);
     loadWatch(item, token);
     loadReviews(item, token);
+  }
+
+  // Oyuncular ve yönetmen
+  async function loadCast(item, token) {
+    try {
+      const { cast, directors } = await Tmdb.credits(item.tmdbType, item.tmdbId);
+      if (token !== detailToken) return;
+      document.getElementById('detail-director').textContent = directors.length ? `Yönetmen: ${directors.join(', ')}` : '';
+      castEl.innerHTML = cast.length
+        ? `<ul class="cast-list">${cast.map(person => `
+            <li class="cast-person">
+              <span class="cast-photo" style="--hue:${titleHue(person.name)}">
+                <span>${escapeHtml(person.name.charAt(0).toUpperCase())}</span>
+                ${person.photo ? `<img src="${person.photo}" alt="" loading="lazy">` : ''}
+              </span>
+              <strong class="cast-name">${escapeHtml(person.name)}</strong>
+              ${person.character ? `<span class="cast-role">${escapeHtml(person.character)}</span>` : ''}
+            </li>`).join('')}</ul>`
+        : '<p class="hint">Oyuncu bilgisi bulunamadı.</p>';
+    } catch (error) {
+      if (token !== detailToken) return;
+      castEl.innerHTML = `<p class="hint error">Oyuncular getirilemedi. ${escapeHtml(tmdbErrorMessage(error))}</p>`;
+    }
   }
 
   // Kategoriler ve özet
