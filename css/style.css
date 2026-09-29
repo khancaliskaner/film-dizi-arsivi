@@ -1005,6 +1005,56 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.7); }
 
 .goal-form input { width: 120px; }
 
+/* ---------- Detay penceresinde arka plan görseli (Letterboxd gibi) ---------- */
+.detail { position: relative; }
+
+/* Görsel pencerenin en üstünde durur ve aşağı doğru şeffaflaşarak zemine karışır */
+.detail-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 320px;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 12px 12px 0 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 40%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 40%, transparent 100%);
+}
+
+.detail-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.detail-backdrop img.loaded { opacity: 0.55; }
+
+/* İçerik görselin üstünde kalsın */
+.detail > :not(.detail-backdrop) { position: relative; }
+
+/* Görsel varken başlık ve afiş görselin alt kısmına, görselin üstüne biraz boşluk bırakılarak yerleşir */
+.detail.has-backdrop .detail-head { margin-top: 130px; }
+
+/* Kapatma düğmesi her zaman sağ üstte, görselin üzerinde */
+#detail-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 40px;
+  min-height: 40px;
+  font-size: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.detail-top h2 { padding-right: 44px; }
+.detail.has-backdrop .detail-top h2 { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7); padding-right: 0; }
+
 /* ---------- Benzer yapımlar şeridi ve "Sana özel" nedeni ---------- */
 .similar-list {
   list-style: none;
@@ -1499,6 +1549,8 @@ dialog[open]::backdrop { animation: fade-in 0.18s ease-out; backdrop-filter: blu
   .discover-controls input[type="search"] { flex: 1 1 100%; }
   #disc-sort { flex-wrap: wrap; }
   #disc-sort button { flex: 1 1 33%; }
+  .detail-backdrop { height: 220px; }
+  .detail.has-backdrop .detail-head { margin-top: 84px; }
   .segmented button { flex: 1; padding: 0 4px; font-size: 0.8rem; }
   .detail-head img { width: 90px; }
   .stat-tiles { grid-template-columns: 1fr 1fr; }

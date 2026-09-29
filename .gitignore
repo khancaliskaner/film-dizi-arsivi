@@ -8,3 +8,6 @@ js/config.js
 Thumbs.db
 desktop.ini
 .vscode/
+
+# Ekran görüntüsü önizlemeleri (sadece bilgisayarında kalır)
+onizleme/

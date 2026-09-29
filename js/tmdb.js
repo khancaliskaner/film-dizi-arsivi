@@ -41,6 +41,7 @@ const Tmdb = {
       originalTitle: result.original_title || result.original_name,
       year: Number((result.release_date || result.first_air_date || '').slice(0, 4)) || null,
       poster: result.poster_path || '',
+      backdrop: result.backdrop_path || '',
       overview: result.overview || '',
       voteAverage: result.vote_average || 0,
       originalLanguage: result.original_language || '',
@@ -174,7 +175,8 @@ const Tmdb = {
     return {
       genres: (data.genres || []).map(genre => genre.name),
       overview: overview || '',
-      poster: data.poster_path || ''
+      poster: data.poster_path || '',
+      backdrop: data.backdrop_path || '' // detay penceresinin arka plan görseli
     };
   },
 

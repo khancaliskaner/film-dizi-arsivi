@@ -263,13 +263,15 @@
 
   <!-- Keşfet: yapım detayı ve dünyadan yorumlar -->
   <dialog id="detail-dialog">
-    <div class="detail">
+    <div class="detail" id="detail-box">
+      <!-- Filmin geniş arka plan görseli; aşağı doğru karanlığa karışır -->
+      <div class="detail-backdrop" id="detail-backdrop" hidden><img id="detail-backdrop-img" alt=""></div>
+      <button type="button" class="btn btn-icon" id="detail-close" aria-label="Kapat">✕</button>
       <div class="detail-head">
         <img id="detail-poster" alt="">
         <div class="detail-info">
           <div class="detail-top">
             <h2 id="detail-title"></h2>
-            <button type="button" class="btn btn-icon" id="detail-close" aria-label="Kapat">✕</button>
           </div>
           <p class="muted" id="detail-meta"></p>
           <p class="detail-director" id="detail-director"></p>

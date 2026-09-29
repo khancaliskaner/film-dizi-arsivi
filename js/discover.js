@@ -25,6 +25,24 @@ const Discover = (() => {
   const castEl = document.getElementById('detail-cast');
   const imdbEl = document.getElementById('detail-imdb');
   const trailerEl = document.getElementById('detail-trailer');
+  const detailBox = document.getElementById('detail-box');
+  const backdropEl = document.getElementById('detail-backdrop');
+  const backdropImg = document.getElementById('detail-backdrop-img');
+  let currentBackdrop = '';
+
+  // Arka plan görselini koy (path boşsa kaldır). Yüklenince yavaşça belirir; yüklenemezse bir kez yeniden dener, olmazsa gizlenir.
+  function setBackdrop(path) {
+    currentBackdrop = path;
+    detailBox.classList.toggle('has-backdrop', Boolean(path));
+    backdropEl.hidden = !path;
+    backdropImg.classList.remove('loaded');
+    delete backdropImg.dataset.retried;
+    if (path) backdropImg.src = Tmdb.posterUrl(path, 'w1280');
+    else backdropImg.removeAttribute('src');
+  }
+  backdropImg.addEventListener('load', () => backdropImg.classList.add('loaded'));
+  backdropImg.addEventListener('error', () => { if (!retryPoster(backdropImg)) setBackdrop(''); });
+
   const similarEl = document.getElementById('detail-similar');
   let similarItems = []; // açık yapımın benzerleri
   let trailer = null; // açık yapımın fragmanı: { key, name }
@@ -425,6 +443,7 @@ const Discover = (() => {
     posterEl.hidden = !item.poster;
     if (item.poster) posterEl.src = Tmdb.posterUrl(item.poster, 'w342');
     drawActions();
+    setBackdrop(item.backdrop || ''); // liste sonuçlarında hazır gelir, arşiv kartlarında ayrıntılarla birlikte gelir
     document.getElementById('detail-director').textContent = '';
     imdbEl.textContent = '';
     trailerEl.innerHTML = '';
@@ -559,6 +578,7 @@ const Discover = (() => {
       const details = await Tmdb.details(item.tmdbType, item.tmdbId);
       if (token !== detailToken) return;
       currentDetails = details;
+      if (details.backdrop && !currentBackdrop) setBackdrop(details.backdrop);
       document.getElementById('detail-genres').textContent = details.genres.join(', ');
       if (details.overview) document.getElementById('detail-overview').textContent = details.overview;
     } catch {
