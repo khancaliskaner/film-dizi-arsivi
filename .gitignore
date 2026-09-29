@@ -1,0 +1,10 @@
+# Git'e yüklenmeyecek dosyalar
+
+# TMDB API anahtarı (Aşama 3) — asla GitHub'a gitmesin
+js/config.js
+
+# İşletim sistemi / editör çöpleri
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/

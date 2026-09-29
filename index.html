@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<!-- Uygulamanın tek sayfası: üst menü, kart ızgarası ve ekleme/düzenleme formu burada. -->
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arşivim</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#ana" class="logo">Arşivim</a>
+      <nav class="nav">
+        <a href="#ana" data-page="ana">Ana Sayfa</a>
+        <a href="#izlediklerim" data-page="izlediklerim">İzlediklerim</a>
+        <a href="#liste" data-page="liste">İzleme Listem</a>
+      </nav>
+      <button class="btn btn-primary" id="add-btn">+ Ekle</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1 class="page-title" id="page-title"></h1>
+    <p class="page-subtitle" id="page-subtitle"></p>
+    <div class="grid" id="grid"></div>
+    <p class="empty" id="empty" hidden></p>
+  </main>
+
+  <!-- Ekleme / düzenleme formu (açılır pencere) -->
+  <dialog id="form-dialog">
+    <form id="entry-form" novalidate>
+      <h2 id="form-title">Yeni Kayıt</h2>
+
+      <label>Başlık *
+        <input type="text" name="title" required maxlength="150" autocomplete="off">
+      </label>
+
+      <div class="row">
+        <fieldset class="toggle">
+          <legend>Tür</legend>
+          <label><input type="radio" name="type" value="film" checked> Film</label>
+          <label><input type="radio" name="type" value="dizi"> Dizi</label>
+        </fieldset>
+        <label class="year-field">Yıl
+          <input type="number" name="year" min="1870" max="2100" inputmode="numeric">
+        </label>
+      </div>
+
+      <fieldset class="toggle">
+        <legend>Durum</legend>
+        <label><input type="radio" name="status" value="izledim" checked> İzledim</label>
+        <label><input type="radio" name="status" value="izlenecek"> İzlemek istiyorum</label>
+      </fieldset>
+
+      <div id="watched-fields">
+        <div class="field">
+          <span class="field-label">Puan <span id="rating-text" class="muted"></span></span>
+          <div class="star-row">
+            <div class="star-input" id="star-input" tabindex="0" role="slider"
+                 aria-label="Puan" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
+              <span class="stars-bg">★★★★★</span>
+              <span class="stars-fill" id="stars-fill">★★★★★</span>
+            </div>
+            <button type="button" class="btn btn-small" id="clear-rating">Temizle</button>
+          </div>
+        </div>
+
+        <label>İzleme tarihi
+          <input type="date" name="watchedDate">
+        </label>
+      </div>
+
+      <label>Kısa yorum
+        <textarea name="review" rows="3" maxlength="1000"></textarea>
+      </label>
+
+      <p class="form-error" id="form-error" hidden></p>
+
+      <div class="form-actions">
+        <button type="button" class="btn" id="cancel-btn">Vazgeç</button>
+        <button type="submit" class="btn btn-primary">Kaydet</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
