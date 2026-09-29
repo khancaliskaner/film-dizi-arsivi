@@ -313,6 +313,13 @@ const Discover = (() => {
     loadReviews(item, token);
   }
 
+  // 184203 -> "184.203", 2516752 -> "2,5 milyon"
+  function formatVotes(count) {
+    return count >= 1e6
+      ? `${(count / 1e6).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} milyon`
+      : count.toLocaleString('tr-TR');
+  }
+
   // IMDb puanı: önce TMDB'den IMDb numarası, sonra OMDb'den puan. Anahtar yoksa sadece IMDb bağlantısı gösterilir.
   async function loadImdb(item, token) {
     let imdbId = '';
@@ -334,7 +341,7 @@ const Discover = (() => {
       const imdb = await Omdb.rating(imdbId);
       if (token !== detailToken) return;
       imdbEl.innerHTML = imdb
-        ? `${link(`IMDb puanı: <strong>${imdb.rating.toFixed(1)}</strong> / 10`)} <span class="muted">(${new Intl.NumberFormat('tr-TR', { notation: 'compact' }).format(imdb.votes)} oy)</span>`
+        ? `${link(`IMDb puanı: <strong>${imdb.rating.toFixed(1)}</strong> / 10`)} <span class="muted">(${formatVotes(imdb.votes)} oy)</span>`
         : `${link("IMDb'de aç ↗")} <span class="muted">· IMDb'de henüz puan yok</span>`;
     } catch (error) {
       if (token !== detailToken) return;
